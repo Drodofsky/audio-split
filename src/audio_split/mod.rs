@@ -232,7 +232,7 @@ impl AudioSpan {
         self.id
     }
     pub fn contains(&self, duration: Duration) -> bool {
-        self.start <= duration && self.end >= duration
+        self.start < duration && self.end > duration
     }
     fn calc_slider_length(&self) -> Length {
         let size = f32::max(
