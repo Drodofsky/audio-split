@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-iced = {version = "0.14", features = ["tokio","debug"]}
+iced = {version = "0.14", features = ["tokio","debug","canvas"]}
 tokio = {version = "^1.40",features = ["process","fs","macros", "rt-multi-thread"]}
 rodio = "0.21"
 rfd = "0.17"

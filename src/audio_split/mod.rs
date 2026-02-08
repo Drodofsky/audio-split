@@ -4,13 +4,16 @@ use iced::{Element, Length, Subscription, Task, widget, window::Event};
 use rfd::AsyncFileDialog;
 use rodio::{Decoder, Source};
 
-use crate::audio_split::error::Error;
+use crate::audio_split::{analyze::detect_silence, error::Error};
+mod analyze;
+mod canvas;
 mod error;
 
 #[derive(Debug, Default)]
 pub struct AudioSplit {
     audio: Option<Audio>,
     is_playing: bool,
+    path: Option<PathBuf>,
 }
 
 impl AudioSplit {
@@ -24,6 +27,7 @@ impl AudioSplit {
             }
             Message::AudioFilePathLoaded(path) => {
                 if let Some(path) = path {
+                    self.path = Some(path.clone().into());
                     Task::perform(open_audio_file(path), Message::AudioLoaded)
                 } else {
                     Task::none()
@@ -77,9 +81,32 @@ impl AudioSplit {
                 Task::none()
             }
             Message::WindowEvent(e) => match e {
-                Event::FileDropped(f) => Task::perform(open_audio_file(f), Message::AudioLoaded),
+                Event::FileDropped(f) => {
+                    self.path = Some(f.clone());
+                    Task::perform(open_audio_file(f), Message::AudioLoaded)
+                }
                 _ => Task::none(),
             },
+            Message::Analyze => Task::perform(
+                detect_silence(
+                    self.path.clone().unwrap(),
+                    -50.,
+                    Duration::from_secs_f32(0.1),
+                ),
+                |a| Message::Analyzed(a),
+            ),
+            Message::Analyzed(s) => {
+                if let Some(audio) = self.audio.as_mut() {
+                    Audio::set_splices(&mut audio.spans, s.unwrap());
+                }
+                Task::none()
+            }
+            Message::ClickSplice(splice) => {
+                if let Some(audio) = self.audio.as_mut() {
+                    audio.toggle_selected_splice(splice);
+                }
+                Task::none()
+            }
         }
     }
     pub fn view(&self) -> Element<'_, Message> {
@@ -93,7 +120,8 @@ impl AudioSplit {
             } else {
                 widget::button("play").on_press(Message::Play)
             },
-            widget::button("split").on_press(Message::Split)
+            widget::button("split").on_press(Message::Split),
+            widget::button("analyze").on_press(Message::Analyze)
         ]
         .into()
     }
@@ -131,6 +159,8 @@ pub struct AudioSpan {
     end: Duration,
     name: String,
     position: f32,
+    splices: Vec<Duration>,
+    selected_splices: Vec<Duration>,
 }
 
 impl AudioSpan {
@@ -141,11 +171,14 @@ impl AudioSpan {
             end,
             name,
             position: start.as_secs_f32(),
+            splices: Vec::new(),
+            selected_splices: Vec::new(),
         }
     }
     pub fn view(&self) -> Element<'_, Message> {
         widget::container(
             widget::column![
+                widget::canvas(self).width(self.calc_slider_length()),
                 widget::slider(
                     self.start.as_secs_f32()..=self.end.as_secs_f32(),
                     self.position,
@@ -185,6 +218,33 @@ impl AudioSpan {
         );
         Length::Fixed(size)
     }
+    pub fn insert_splice(&mut self, splice: Duration) -> bool {
+        let fits = self.contains(splice);
+        if fits {
+            self.splices.insert(0, splice);
+        }
+        fits
+    }
+    pub fn toggle_splice_selection(&mut self, splice: Duration) -> bool {
+        let fits = self.contains(splice);
+        if fits {
+            if let Some((i, _)) = self
+                .selected_splices
+                .iter()
+                .enumerate()
+                .find(|(_, s)| **s == splice)
+            {
+                self.selected_splices.remove(i);
+            } else {
+                self.selected_splices.push(splice);
+            }
+        }
+        fits
+    }
+    pub fn clear_splices(&mut self) {
+        self.splices.clear();
+        self.selected_splices.clear();
+    }
 }
 
 impl Audio {
@@ -217,7 +277,19 @@ impl Audio {
         self.sink.pause();
     }
     pub fn split(&mut self) {
-        let pos = self.sink.get_pos();
+        let mut splits: Vec<Duration> = self
+            .spans
+            .iter()
+            .map(|s| s.selected_splices.iter())
+            .flatten()
+            .map(|s| *s)
+            .collect();
+        splits.sort();
+        for split in splits {
+            self.split_at(split);
+        }
+    }
+    fn split_at(&mut self, pos: Duration) {
         let (index, span) = self
             .spans
             .iter()
@@ -228,19 +300,23 @@ impl Audio {
         let end = span.end;
         let name = span.name.clone();
         let id = span.id;
-        self.spans.remove(index);
-        self.spans
-            .insert(index, AudioSpan::new(id, start, pos, name));
+        let splices = span.splices.clone();
+        let mut span_1 = AudioSpan::new(id, start, pos, name);
         self.index_counter += 1;
-        self.spans.insert(
-            index + 1,
-            AudioSpan::new(
-                self.index_counter,
-                pos,
-                end,
-                format!("{}_{}", self.file_name, self.index_counter),
-            ),
+        let mut span_2 = AudioSpan::new(
+            self.index_counter,
+            pos,
+            end,
+            format!("{}_{}", self.file_name, self.index_counter),
         );
+        for splice in splices {
+            span_1.insert_splice(splice);
+            span_2.insert_splice(splice);
+        }
+
+        self.spans.remove(index);
+        self.spans.insert(index, span_1);
+        self.spans.insert(index + 1, span_2);
     }
     pub fn delete_span(&mut self, id: u32) {
         let res = self.spans.iter().enumerate().find(|(_, s)| id == s.id());
@@ -255,6 +331,26 @@ impl Audio {
     }
     fn get_span_mut(&mut self, id: u32) -> Option<&mut AudioSpan> {
         self.spans.iter_mut().find(|s| s.id() == id)
+    }
+    // spices must be sorted
+    pub fn set_splices(spans: &mut [AudioSpan], mut splices: Vec<Duration>) {
+        spans.iter_mut().for_each(|s| s.clear_splices());
+        for span in spans.iter_mut().rev() {
+            while let Some(last) = splices.last() {
+                if span.insert_splice(*last) {
+                    splices.pop();
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+    pub fn toggle_selected_splice(&mut self, splice: Duration) {
+        for span in self.spans.iter_mut() {
+            if span.toggle_splice_selection(splice) == true {
+                return;
+            }
+        }
     }
 }
 
@@ -271,6 +367,9 @@ pub enum Message {
     DeleteAudioSpan(u32),
     SpanTextUpdate(u32, String),
     WindowEvent(iced::window::Event),
+    Analyze,
+    Analyzed(Result<Vec<Duration>, Error>),
+    ClickSplice(Duration),
 }
 
 pub async fn open_audio_file_dialog() -> Option<String> {
@@ -320,7 +419,7 @@ impl fmt::Debug for Audio {
 mod test {
     use std::time::Duration;
 
-    use crate::audio_split::AudioSpan;
+    use crate::audio_split::{Audio, AudioSpan};
 
     #[test]
     fn contains_position() {
@@ -331,5 +430,23 @@ mod test {
             String::new(),
         );
         assert!(span.contains(Duration::from_secs_f32(12.6)))
+    }
+    #[test]
+    fn set_splices_1() {
+        let splices = vec![
+            Duration::from_secs_f32(12.5),
+            Duration::from_secs_f32(15.5),
+            Duration::from_secs_f32(17.5),
+            Duration::from_secs_f32(28.5),
+        ];
+        let control = splices.clone();
+        let mut spans = vec![AudioSpan::new(
+            0,
+            Duration::from_secs_f32(0.0),
+            Duration::from_secs_f32(30.0),
+            String::new(),
+        )];
+        Audio::set_splices(&mut spans, splices);
+        assert_eq!(spans[0].splices, control);
     }
 }
