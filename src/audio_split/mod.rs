@@ -14,11 +14,16 @@ pub struct AudioSplit {
     audio: Option<Audio>,
     is_playing: bool,
     path: Option<PathBuf>,
+    threshold: String,
+    duration: String,
 }
 
 impl AudioSplit {
     pub fn init() -> Self {
-        Self::default()
+        let mut s = Self::default();
+        s.duration = "0.3".to_string();
+        s.threshold = "-50.0".to_string();
+        s
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -87,14 +92,20 @@ impl AudioSplit {
                 }
                 _ => Task::none(),
             },
-            Message::Analyze => Task::perform(
-                detect_silence(
-                    self.path.clone().unwrap(),
-                    -50.,
-                    Duration::from_secs_f32(0.1),
-                ),
-                |a| Message::Analyzed(a),
-            ),
+            Message::Analyze => {
+                if let Some(path) = self.path.clone() {
+                    Task::perform(
+                        detect_silence(
+                            path,
+                            self.threshold.parse().unwrap(),
+                            Duration::from_secs_f32(self.duration.parse().unwrap()),
+                        ),
+                        |a| Message::Analyzed(a),
+                    )
+                } else {
+                    Task::none()
+                }
+            }
             Message::Analyzed(s) => {
                 if let Some(audio) = self.audio.as_mut() {
                     Audio::set_splices(&mut audio.spans, s.unwrap());
@@ -105,6 +116,14 @@ impl AudioSplit {
                 if let Some(audio) = self.audio.as_mut() {
                     audio.toggle_selected_splice(splice);
                 }
+                Task::none()
+            }
+            Message::UpdateDuration(s) => {
+                self.duration = s;
+                Task::none()
+            }
+            Message::UpdateThreshold(s) => {
+                self.threshold = s;
                 Task::none()
             }
         }
@@ -120,8 +139,12 @@ impl AudioSplit {
             } else {
                 widget::button("play").on_press(Message::Play)
             },
+            widget::text("threshold in dB:"),
+            widget::text_input("", &self.threshold).on_input(Message::UpdateThreshold),
+            widget::text("duration in sec:"),
+            widget::text_input("", &self.duration).on_input(Message::UpdateDuration),
+            widget::button("analyze").on_press(Message::Analyze),
             widget::button("split").on_press(Message::Split),
-            widget::button("analyze").on_press(Message::Analyze)
         ]
         .into()
     }
@@ -370,6 +393,8 @@ pub enum Message {
     Analyze,
     Analyzed(Result<Vec<Duration>, Error>),
     ClickSplice(Duration),
+    UpdateDuration(String),
+    UpdateThreshold(String),
 }
 
 pub async fn open_audio_file_dialog() -> Option<String> {
