@@ -50,6 +50,13 @@ impl AudioSplit {
             Message::Tick => {
                 if let Some(audio) = self.audio.as_mut() {
                     audio.update_position_info();
+                    if let Some(last) = audio.spans.last()
+                        && let Some(sub) = (last.end.checked_sub(audio.sink.get_pos()))
+                        && sub.as_millis() < 300
+                    {
+                        println!("end");
+                        audio.set_pos(0, 0.0);
+                    }
                 }
                 Task::none()
             }
