@@ -1,6 +1,6 @@
 use std::{fmt, fs::File, path::PathBuf, sync::Arc, time::Duration};
 
-use iced::{Element, Length, Subscription, Task, widget};
+use iced::{Element, Length, Subscription, Task, widget, window::Event};
 use rfd::AsyncFileDialog;
 use rodio::{Decoder, Source};
 
@@ -76,6 +76,10 @@ impl AudioSplit {
                 }
                 Task::none()
             }
+            Message::WindowEvent(e) => match e {
+                Event::FileDropped(f) => Task::perform(open_audio_file(f), Message::AudioLoaded),
+                _ => Task::none(),
+            },
         }
     }
     pub fn view(&self) -> Element<'_, Message> {
@@ -103,7 +107,11 @@ impl AudioSplit {
         .into()
     }
     pub fn subscription(&self) -> Subscription<Message> {
-        iced::time::every(Duration::from_millis(100)).map(|_| Message::Tick)
+        let tick = iced::time::every(Duration::from_millis(100)).map(|_| Message::Tick);
+        Subscription::batch([
+            tick,
+            iced::window::events().map(|f| Message::WindowEvent(f.1)),
+        ])
     }
 }
 
@@ -262,6 +270,7 @@ pub enum Message {
     Split,
     DeleteAudioSpan(u32),
     SpanTextUpdate(u32, String),
+    WindowEvent(iced::window::Event),
 }
 
 pub async fn open_audio_file_dialog() -> Option<String> {
@@ -272,13 +281,10 @@ pub async fn open_audio_file_dialog() -> Option<String> {
         .and_then(|h| h.path().to_str().map(|s| s.to_string()))
 }
 
-pub async fn open_audio_file(path: String) -> Result<Audio, Error> {
+pub async fn open_audio_file(path: impl Into<PathBuf> + Send + 'static) -> Result<Audio, Error> {
     tokio::task::spawn_blocking(|| {
-        let file_name: String = PathBuf::from(&path)
-            .file_prefix()
-            .unwrap()
-            .display()
-            .to_string();
+        let path: PathBuf = path.into();
+        let file_name: String = path.file_prefix().unwrap().display().to_string();
         let file = File::open(path).unwrap();
         let stream_handle = rodio::OutputStreamBuilder::open_default_stream().unwrap();
         let sink = rodio::Sink::connect_new(stream_handle.mixer());
