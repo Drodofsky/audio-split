@@ -3,6 +3,7 @@ use std::{fmt, fs::File, path::PathBuf, sync::Arc, time::Duration};
 use iced::{Element, Length, Subscription, Task, widget, window::Event};
 use rfd::AsyncFileDialog;
 use rodio::{Decoder, Source};
+use tokio::process::Command;
 
 use crate::audio_split::{analyze::detect_silence, error::Error};
 mod analyze;
@@ -13,9 +14,11 @@ mod error;
 pub struct AudioSplit {
     audio: Option<Audio>,
     is_playing: bool,
-    path: Option<PathBuf>,
+    import_path: Option<PathBuf>,
+    export_path: Option<PathBuf>,
     threshold: String,
     duration: String,
+    extension: Option<PathBuf>,
 }
 
 impl AudioSplit {
@@ -29,20 +32,47 @@ impl AudioSplit {
         match message {
             Message::OpenAudioFileDialog => Task::perform(
                 open_audio_file_dialog(
-                    self.path
+                    self.import_path
                         .clone()
                         .map(|p| p.parent().map(|p| p.to_path_buf()))
                         .flatten(),
                 ),
                 Message::AudioFilePathLoaded,
             ),
+            Message::OpenExportDialog => Task::perform(
+                open_export_folder_dialog(self.export_path.clone()),
+                Message::ExportPathLoaded,
+            ),
             Message::AudioFilePathLoaded(path) => {
                 if let Some(path) = path {
-                    self.path = Some(path.clone().into());
+                    self.import_path = Some(path.clone().into());
+                    self.extension = PathBuf::from(path.clone()).extension().map(|s| s.into());
                     Task::perform(open_audio_file(path), Message::AudioLoaded)
                 } else {
                     Task::none()
                 }
+            }
+            Message::ExportPathLoaded(path) => {
+                if let Some(path) = path
+                    && let Some(audio) = &self.audio
+                {
+                    self.export_path = Some(path.clone().into());
+                    Task::perform(
+                        save_audio_files(
+                            self.import_path.clone().unwrap(),
+                            path.into(),
+                            self.extension.clone().unwrap(),
+                            audio.spans.clone(),
+                        ),
+                        Message::AudioSaved,
+                    )
+                } else {
+                    Task::none()
+                }
+            }
+            Message::AudioSaved(r) => {
+                r.unwrap();
+                Task::none()
             }
             Message::AudioLoaded(audio) => {
                 self.audio = Some(audio.unwrap());
@@ -100,13 +130,13 @@ impl AudioSplit {
             }
             Message::WindowEvent(e) => match e {
                 Event::FileDropped(f) => {
-                    self.path = Some(f.clone());
+                    self.import_path = Some(f.clone());
                     Task::perform(open_audio_file(f), Message::AudioLoaded)
                 }
                 _ => Task::none(),
             },
             Message::Analyze => {
-                if let Some(path) = self.path.clone() {
+                if let Some(path) = self.import_path.clone() {
                     Task::perform(
                         detect_silence(
                             path,
@@ -158,6 +188,7 @@ impl AudioSplit {
             widget::text_input("", &self.duration).on_input(Message::UpdateDuration),
             widget::button("analyze").on_press(Message::Analyze),
             widget::button("split").on_press(Message::Split),
+            widget::button("export").on_press(Message::OpenExportDialog),
         ]
         .into()
     }
@@ -411,8 +442,10 @@ impl Audio {
 #[derive(Debug, Clone)]
 pub enum Message {
     OpenAudioFileDialog,
+    OpenExportDialog,
     Tick,
     AudioFilePathLoaded(Option<String>),
+    ExportPathLoaded(Option<String>),
     AudioLoaded(Result<Audio, Error>),
     AudioSpanPositionUpdate(u32, f32),
     Pause,
@@ -426,6 +459,7 @@ pub enum Message {
     ClickSplice(Duration),
     UpdateDuration(String),
     UpdateThreshold(String),
+    AudioSaved(Result<(), Error>),
 }
 
 pub async fn open_audio_file_dialog(starting_path: Option<PathBuf>) -> Option<String> {
@@ -437,6 +471,50 @@ pub async fn open_audio_file_dialog(starting_path: Option<PathBuf>) -> Option<St
         .pick_file()
         .await
         .and_then(|h| h.path().to_str().map(|s| s.to_string()))
+}
+pub async fn open_export_folder_dialog(starting_path: Option<PathBuf>) -> Option<String> {
+    let mut dialog = AsyncFileDialog::new().set_title("Export Audio Files To Folder");
+    if let Some(path) = starting_path {
+        dialog = dialog.set_directory(path);
+    }
+    dialog
+        .pick_folder()
+        .await
+        .and_then(|h| h.path().to_str().map(|s| s.to_string()))
+}
+
+pub async fn save_audio_files(
+    source: PathBuf,
+    export_path: PathBuf,
+    path_extension: PathBuf,
+    spans: Vec<AudioSpan>,
+) -> Result<(), Error> {
+    for span in spans {
+        let mut export_path = export_path.join(span.name);
+        export_path.add_extension(&path_extension);
+        let base = export_path.parent().unwrap();
+        tokio::fs::create_dir_all(base).await.unwrap();
+        let output = Command::new("ffmpeg")
+            .arg("-hide_banner")
+            .arg("-nostats")
+            .arg("-y")
+            .arg("-i")
+            .arg(&source)
+            .arg("-ss")
+            .arg(fmt_duration(span.start))
+            .arg("-to")
+            .arg(fmt_duration(span.end))
+            .arg(&export_path)
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+    }
+    Ok(())
+}
+
+fn fmt_duration(duration: Duration) -> String {
+    format!("{:.6}", duration.as_secs_f32())
 }
 
 pub async fn open_audio_file(path: impl Into<PathBuf> + Send + 'static) -> Result<Audio, Error> {
