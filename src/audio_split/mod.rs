@@ -226,13 +226,17 @@ impl AudioSpan {
         .width(self.calc_slider_length())
         .into()
     }
-    pub fn set_pos(&mut self, pos: f32) {
+
+    pub fn set_pos_and_get_info(&mut self, pos: f32) -> (i8, Duration) {
         if pos <= self.start.as_secs_f32() {
             self.position = self.start.as_secs_f32();
+            (-1, self.start)
         } else if pos >= self.end.as_secs_f32() {
             self.position = self.end.as_secs_f32();
+            (1, self.start)
         } else {
             self.position = pos;
+            (0, self.start)
         }
     }
     pub fn id(&self) -> u32 {
@@ -293,12 +297,26 @@ impl Audio {
         self.spans
             .iter_mut()
             .find(|s| s.id() == span_id)
-            .map(|s| s.set_pos(pos));
+            .map(|s| s.set_pos_and_get_info(pos));
         self.sink.try_seek(Duration::from_secs_f32(pos)).unwrap();
     }
     pub fn update_position_info(&mut self) {
         let pos = self.sink.get_pos().as_secs_f32();
-        self.spans.iter_mut().for_each(|s| s.set_pos(pos));
+        let mut found_zero = false;
+        let mut found_next = false;
+        let mut skip_to = Duration::default();
+        for (b, pos) in self.spans.iter_mut().map(|s| s.set_pos_and_get_info(pos)) {
+            if b == 0 || found_zero == true {
+                found_zero = true;
+            } else if b == -1 && found_next == false {
+                found_next = true;
+                skip_to = pos;
+            }
+        }
+        if found_next {
+            println!("skip");
+            self.sink.try_seek(skip_to).unwrap()
+        }
     }
     pub fn set_play(&mut self) {
         self.sink.play();
