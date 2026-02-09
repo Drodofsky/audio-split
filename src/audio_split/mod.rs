@@ -479,7 +479,9 @@ pub async fn open_audio_file_dialog(starting_path: Option<PathBuf>) -> Option<St
         .and_then(|h| h.path().to_str().map(|s| s.to_string()))
 }
 pub async fn open_export_folder_dialog(starting_path: Option<PathBuf>) -> Option<String> {
-    let mut dialog = AsyncFileDialog::new().set_title("Export Audio Files To Folder");
+    let mut dialog = AsyncFileDialog::new()
+        .set_title("Export Audio Files To Folder")
+        .set_can_create_directories(true);
     if let Some(path) = starting_path {
         dialog = dialog.set_directory(path);
     }
