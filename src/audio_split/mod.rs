@@ -195,11 +195,15 @@ impl AudioSplit {
         .into()
     }
     fn view_center(&self) -> Element<'_, Message> {
-        widget::container(if let Some(audio) = &self.audio {
-            audio.view()
+        if let Some(audio) = &self.audio {
+            widget::container(widget::column![
+                widget::space().height(Length::FillPortion(2)),
+                audio.view(),
+                widget::space().height(Length::FillPortion(3)),
+            ])
         } else {
-            widget::text("Please open an audio file").into()
-        })
+            widget::container(widget::text("Please open an audio file"))
+        }
         .center(Length::Fill)
         .into()
     }
