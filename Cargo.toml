@@ -8,3 +8,8 @@ iced = {version = "0.14", features = ["tokio","debug","canvas"]}
 tokio = {version = "^1.40",features = ["process","fs","macros", "rt-multi-thread"]}
 rodio = "0.21"
 rfd = "0.17"
+
+
+[dev-dependencies]
+iced_test = "0.14"
+iced_runtime = "0.14"
