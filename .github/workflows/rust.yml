@@ -23,9 +23,22 @@ jobs:
         sudo apt-get install -y pulseaudio pulseaudio-utils
     - name: setup audio
       run: |
-        pulseaudio --start
-        pactl load-module module-null-sink sink_name=DummyOutput
-        pactl set-default-sink DummyOutput  
+         export XDG_RUNTIME_DIR=/tmp/xdg-runtime
+         mkdir -p "$XDG_RUNTIME_DIR"
+         chmod 700 "$XDG_RUNTIME_DIR"
+         echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> $GITHUB_ENV
+
+         pulseaudio -D --exit-idle-time=-1 --disallow-exit --log-target=stderr
+
+         for i in $(seq 1 50); do
+           pactl info >/dev/null 2>&1 && break
+           sleep 0.1
+           done
+         pactl info
+
+         pactl load-module module-null-sink sink_name=DummyOutput
+         pactl set-default-sink DummyOutput
+         pactl list short sinks
     - name: Build
       run: cargo build --verbose
     - name: Run tests
