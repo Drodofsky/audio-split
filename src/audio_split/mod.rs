@@ -320,7 +320,6 @@ impl AudioSpan {
     }
     pub fn clear_splices(&mut self) {
         self.splices.clear();
-        self.selected_splices.clear();
     }
 }
 
