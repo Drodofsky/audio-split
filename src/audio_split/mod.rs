@@ -1,6 +1,6 @@
 use std::{fmt, fs::File, path::PathBuf, sync::Arc, time::Duration};
 
-use iced::{Element, Length, Subscription, Task, widget, window::Event};
+use iced::{Element, Length, Subscription, Task, alignment::Vertical, widget, window::Event};
 use rfd::AsyncFileDialog;
 use rodio::{Decoder, Source};
 use tokio::process::Command;
@@ -190,6 +190,8 @@ impl AudioSplit {
             widget::button("split").on_press(Message::Split),
             widget::button("export").on_press(Message::OpenExportDialog),
         ]
+        .spacing(5)
+        .align_y(Vertical::Center)
         .into()
     }
     fn view_center(&self) -> Element<'_, Message> {
