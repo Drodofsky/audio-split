@@ -27,9 +27,15 @@ impl AudioSplit {
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::OpenAudioFileDialog => {
-                Task::perform(open_audio_file_dialog(), Message::AudioFilePathLoaded)
-            }
+            Message::OpenAudioFileDialog => Task::perform(
+                open_audio_file_dialog(
+                    self.path
+                        .clone()
+                        .map(|p| p.parent().map(|p| p.to_path_buf()))
+                        .flatten(),
+                ),
+                Message::AudioFilePathLoaded,
+            ),
             Message::AudioFilePathLoaded(path) => {
                 if let Some(path) = path {
                     self.path = Some(path.clone().into());
@@ -422,9 +428,12 @@ pub enum Message {
     UpdateThreshold(String),
 }
 
-pub async fn open_audio_file_dialog() -> Option<String> {
-    AsyncFileDialog::new()
-        .set_title("Open Audio File")
+pub async fn open_audio_file_dialog(starting_path: Option<PathBuf>) -> Option<String> {
+    let mut dialog = AsyncFileDialog::new().set_title("Open Audio File");
+    if let Some(path) = starting_path {
+        dialog = dialog.set_directory(path);
+    }
+    dialog
         .pick_file()
         .await
         .and_then(|h| h.path().to_str().map(|s| s.to_string()))
