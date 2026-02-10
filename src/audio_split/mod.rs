@@ -5,8 +5,9 @@ use rfd::AsyncFileDialog;
 use rodio::{Decoder, Source};
 use tokio::process::Command;
 
-use crate::audio_split::{analyze::detect_silence, error::Error};
+use crate::audio_split::{analyze::detect_silence, audio_span::AudioSpan, error::Error};
 mod analyze;
+mod audio_span;
 mod canvas;
 mod error;
 
@@ -87,7 +88,7 @@ impl AudioSplit {
                 if let Some(audio) = self.audio.as_mut() {
                     audio.update_position_info();
                     if let Some(last) = audio.spans.last()
-                        && let Some(sub) = (last.end.checked_sub(audio.sink.get_pos()))
+                        && let Some(sub) = (last.end().checked_sub(audio.sink.get_pos()))
                         && sub.as_millis() < 300
                     {
                         println!("end");
@@ -225,104 +226,6 @@ pub struct Audio {
     index_counter: u32,
 }
 
-#[derive(Debug, Clone)]
-pub struct AudioSpan {
-    id: u32,
-    start: Duration,
-    end: Duration,
-    name: String,
-    position: f32,
-    splices: Vec<Duration>,
-    selected_splices: Vec<Duration>,
-}
-
-impl AudioSpan {
-    pub fn new(id: u32, start: Duration, end: Duration, name: String) -> Self {
-        Self {
-            id,
-            start,
-            end,
-            name,
-            position: start.as_secs_f32(),
-            splices: Vec::new(),
-            selected_splices: Vec::new(),
-        }
-    }
-    pub fn view(&self) -> Element<'_, Message> {
-        widget::container(
-            widget::column![
-                widget::canvas(self).width(self.calc_slider_length()),
-                widget::slider(
-                    self.start.as_secs_f32()..=self.end.as_secs_f32(),
-                    self.position,
-                    |p| Message::AudioSpanPositionUpdate(self.id, p)
-                ),
-                widget::text_input("", &self.name)
-                    .on_input(|t| Message::SpanTextUpdate(self.id, t)),
-                widget::button("delete")
-                    .style(widget::button::danger)
-                    .on_press(Message::DeleteAudioSpan(self.id))
-            ]
-            .spacing(5),
-        )
-        .padding(5)
-        .width(self.calc_slider_length())
-        .into()
-    }
-
-    pub fn set_pos_and_get_info(&mut self, pos: f32) -> (i8, Duration) {
-        if pos <= self.start.as_secs_f32() {
-            self.position = self.start.as_secs_f32();
-            (-1, self.start)
-        } else if pos >= self.end.as_secs_f32() {
-            self.position = self.end.as_secs_f32();
-            (1, self.start)
-        } else {
-            self.position = pos;
-            (0, self.start)
-        }
-    }
-    pub fn id(&self) -> u32 {
-        self.id
-    }
-    pub fn contains(&self, duration: Duration) -> bool {
-        self.start < duration && self.end > duration
-    }
-    fn calc_slider_length(&self) -> Length {
-        let size = f32::max(
-            (self.end.as_secs_f32() - self.start.as_secs_f32()) * 10.,
-            100.,
-        );
-        Length::Fixed(size)
-    }
-    pub fn insert_splice(&mut self, splice: Duration) -> bool {
-        let fits = self.contains(splice);
-        if fits {
-            self.splices.insert(0, splice);
-        }
-        fits
-    }
-    pub fn toggle_splice_selection(&mut self, splice: Duration) -> bool {
-        let fits = self.contains(splice);
-        if fits {
-            if let Some((i, _)) = self
-                .selected_splices
-                .iter()
-                .enumerate()
-                .find(|(_, s)| **s == splice)
-            {
-                self.selected_splices.remove(i);
-            } else {
-                self.selected_splices.push(splice);
-            }
-        }
-        fits
-    }
-    pub fn clear_splices(&mut self) {
-        self.splices.clear();
-    }
-}
-
 impl Audio {
     pub fn view(&self) -> Element<'_, Message> {
         let mut row = widget::Row::new();
@@ -370,7 +273,7 @@ impl Audio {
         let mut splits: Vec<Duration> = self
             .spans
             .iter()
-            .map(|s| s.selected_splices.iter())
+            .map(|s| s.selected_splices().iter())
             .flatten()
             .map(|s| *s)
             .collect();
@@ -386,11 +289,11 @@ impl Audio {
             .enumerate()
             .find(|(_, s)| s.contains(pos))
             .unwrap();
-        let start = span.start;
-        let end = span.end;
-        let name = span.name.clone();
-        let id = span.id;
-        let splices = span.splices.clone();
+        let start = span.start();
+        let end = span.end();
+        let name = span.name().to_string();
+        let id = span.id();
+        let splices = span.splices().to_vec();
         let mut span_1 = AudioSpan::new(id, start, pos, name);
         self.index_counter += 1;
         let mut span_2 = AudioSpan::new(
@@ -416,7 +319,7 @@ impl Audio {
     }
     pub fn update_span_text(&mut self, id: u32, text: String) {
         if let Some(span) = self.get_span_mut(id) {
-            span.name = text;
+            span.set_name(text);
         }
     }
     fn get_span_mut(&mut self, id: u32) -> Option<&mut AudioSpan> {
@@ -497,7 +400,7 @@ pub async fn save_audio_files(
     spans: Vec<AudioSpan>,
 ) -> Result<(), Error> {
     for span in spans {
-        let mut export_path = export_path.join(span.name);
+        let mut export_path = export_path.join(span.name());
         export_path.add_extension(&path_extension);
         let base = export_path.parent().unwrap();
         tokio::fs::create_dir_all(base).await.unwrap();
@@ -508,9 +411,9 @@ pub async fn save_audio_files(
             .arg("-i")
             .arg(&source)
             .arg("-ss")
-            .arg(fmt_duration(span.start))
+            .arg(fmt_duration(span.start()))
             .arg("-to")
-            .arg(fmt_duration(span.end))
+            .arg(fmt_duration(span.end()))
             .arg(&export_path)
             .output()
             .await
@@ -591,6 +494,6 @@ mod test {
             String::new(),
         )];
         Audio::set_splices(&mut spans, splices);
-        assert_eq!(spans[0].splices, control);
+        assert_eq!(spans[0].splices(), control);
     }
 }
