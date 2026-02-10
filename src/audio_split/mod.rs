@@ -37,7 +37,7 @@ impl AudioSplit {
     pub fn init() -> Self {
         let mut s = Self::default();
         s.duration = "0.3".to_string();
-        s.threshold = "-50.0".to_string();
+        s.threshold = "-45.0".to_string();
         s
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
