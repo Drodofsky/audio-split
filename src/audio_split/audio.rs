@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{fmt, sync::Arc, time::Duration};
 
 use iced::{Element, Length, widget};
 
@@ -154,5 +154,11 @@ impl Audio {
                 return;
             }
         }
+    }
+}
+
+impl fmt::Debug for Audio {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Audio")
     }
 }

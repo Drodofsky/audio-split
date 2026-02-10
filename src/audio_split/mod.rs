@@ -1,4 +1,4 @@
-use std::{fmt, fs::File, path::PathBuf, time::Duration};
+use std::{fs::File, path::PathBuf, time::Duration};
 
 use iced::{Element, Length, Subscription, Task, alignment::Vertical, widget, window::Event};
 use rfd::AsyncFileDialog;
@@ -316,12 +316,6 @@ pub async fn open_audio_file(path: impl Into<PathBuf> + Send + 'static) -> Resul
     })
     .await
     .unwrap()
-}
-
-impl fmt::Debug for Audio {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Audio")
-    }
 }
 
 #[cfg(test)]
