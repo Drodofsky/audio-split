@@ -23,10 +23,7 @@ jobs:
           - os: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup FFmpeg
-      if: runner.os == 'Windows'
-      uses: FedericoCarboni/setup-ffmpeg@v3
+    - uses: actions/checkout@v4 
     - name: Install system dependencies (Linux)
       if: runner.os == 'Linux'
       run: |
@@ -41,6 +38,13 @@ jobs:
         brew update
         brew install ffmpeg
         ffmpeg -version
+
+    - name: Install FFmpeg (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install ffmpeg -y
+        ffmpeg -version
+        
     - name: Build
       run: cargo build --verbose
     - name: Run tests
