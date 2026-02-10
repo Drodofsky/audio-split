@@ -69,7 +69,7 @@ pub async fn open_audio_file(path: impl Into<PathBuf> + Send + 'static) -> Resul
         let file = File::open(path).unwrap();
         let stream_handle = rodio::OutputStreamBuilder::open_default_stream().unwrap();
         let sink = rodio::Sink::connect_new(stream_handle.mixer());
-        let source = rodio::Decoder::try_from(file).unwrap();
+        let source = rodio::Decoder::try_from(file)?;
         let length = source.total_duration().unwrap();
         sink.append(source);
         let span = AudioSpan::new(0, Duration::new(0, 0), length, format!("{file_name}_0"));

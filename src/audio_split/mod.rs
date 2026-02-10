@@ -7,14 +7,19 @@ use crate::audio_split::{
     audio::Audio,
     audio_span::AudioSpan,
     error::Error,
+    user_info::{UserInfo, info::AUDIO_LOADED, warning::NO_AUDIO_LOADED},
     utils::{open_audio_file, open_audio_file_dialog, open_export_folder_dialog, save_audio_files},
 };
 mod analyze;
 mod audio;
 mod audio_span;
 mod canvas;
+mod debug_id;
 mod error;
+mod user_info;
 mod utils;
+
+pub use debug_id::DebugId;
 
 #[derive(Debug, Default)]
 pub struct AudioSplit {
@@ -25,6 +30,7 @@ pub struct AudioSplit {
     threshold: String,
     duration: String,
     extension: Option<PathBuf>,
+    info: UserInfo,
 }
 
 impl AudioSplit {
@@ -81,8 +87,7 @@ impl AudioSplit {
                 Task::none()
             }
             Message::AudioLoaded(audio) => {
-                self.audio = Some(audio.unwrap());
-                self.is_playing = true;
+                self.apply_result_and(audio, |this, audio| this.set_audio(audio));
                 Task::none()
             }
             Message::AudioSpanPositionUpdate(id, pos) => {
@@ -106,6 +111,8 @@ impl AudioSplit {
                 self.is_playing = false;
                 if let Some(audio) = self.audio.as_mut() {
                     audio.set_pause();
+                } else {
+                    self.set_warning(NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                 }
                 Task::none()
             }
@@ -113,6 +120,8 @@ impl AudioSplit {
                 self.is_playing = true;
                 if let Some(audio) = self.audio.as_mut() {
                     audio.set_play();
+                } else {
+                    self.set_warning(NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                 }
                 Task::none()
             }
@@ -178,7 +187,7 @@ impl AudioSplit {
         }
     }
     pub fn view(&self) -> Element<'_, Message> {
-        widget::column![self.view_top(), self.view_center()].into()
+        widget::column![self.view_top(), self.view_center(), self.view_info()].into()
     }
     fn view_top(&self) -> Element<'_, Message> {
         widget::row![
@@ -213,12 +222,46 @@ impl AudioSplit {
         .center(Length::Fill)
         .into()
     }
+    fn view_info(&self) -> Element<'_, Message> {
+        match &self.info {
+            UserInfo::None => widget::container(widget::space()),
+            UserInfo::Info(text, id) => {
+                widget::container(widget::text(text).style(widget::text::base)).id(*id)
+            }
+            UserInfo::Waring(text, id) => {
+                widget::container(widget::text(text).style(widget::text::warning)).id(*id)
+            }
+            UserInfo::Error(e) => {
+                widget::container(widget::text(format!("{e}")).style(widget::text::danger))
+                    .id(e.id())
+            }
+        }
+        .padding(5)
+        .into()
+    }
     pub fn subscription(&self) -> Subscription<Message> {
         let tick = iced::time::every(Duration::from_millis(100)).map(|_| Message::Tick);
         Subscription::batch([
             tick,
             iced::window::events().map(|f| Message::WindowEvent(f.1)),
         ])
+    }
+    pub fn set_audio(&mut self, audio: Audio) {
+        self.audio = Some(audio);
+        self.is_playing = true;
+        self.set_info(AUDIO_LOADED, DebugId::InfoAudioLoaded);
+    }
+    fn apply_result_and<T>(&mut self, value: Result<T, Error>, mut then: impl FnMut(&mut Self, T)) {
+        match value {
+            Ok(v) => then(self, v),
+            Err(e) => self.info = UserInfo::Error(e),
+        }
+    }
+    fn set_warning(&mut self, warning: impl Into<String>, id: DebugId) {
+        self.info = UserInfo::Waring(warning.into(), id)
+    }
+    fn set_info(&mut self, info: impl Into<String>, id: DebugId) {
+        self.info = UserInfo::Info(info.into(), id)
     }
 }
 

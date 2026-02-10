@@ -1,7 +1,7 @@
+mod audio_file;
 use audio_split::*;
-use iced::{Task, futures::StreamExt, window};
+use iced::{Task, futures::StreamExt};
 use iced_runtime::task::into_stream;
-use iced_test::simulator;
 pub async fn execute_task(task: Task<Message>) -> Vec<Message> {
     let mut messages = Vec::new();
 
@@ -22,17 +22,4 @@ pub async fn execute_tasks(task: Task<Message>, audio_split: &mut AudioSplit) {
         let mut new_messages = execute_task(next_task).await;
         messages.append(&mut new_messages);
     }
-}
-
-#[tokio::test]
-async fn test_drop_file() {
-    let mut audio_split = AudioSplit::init();
-
-    let task = audio_split.update(Message::WindowEvent(window::Event::FileDropped(
-        "media/LibriVox_00.mp3".into(),
-    )));
-    execute_tasks(task, &mut audio_split).await;
-
-    let mut ui = simulator(audio_split.view());
-    ui.find("LibriVox_00_0").unwrap();
 }
