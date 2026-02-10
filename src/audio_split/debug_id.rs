@@ -6,6 +6,7 @@ pub enum DebugId {
     InfoAudioLoaded,
     WarningNoAudioLoaded,
     ErrorAudioDecoder,
+    ErrorIO,
     ButtonOpen,
     ButtonPlay,
     ButtonPause,

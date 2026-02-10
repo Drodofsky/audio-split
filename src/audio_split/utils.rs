@@ -66,7 +66,7 @@ pub async fn open_audio_file(path: impl Into<PathBuf> + Send + 'static) -> Resul
     tokio::task::spawn_blocking(|| {
         let path: PathBuf = path.into();
         let file_name: String = path.file_prefix().unwrap().display().to_string();
-        let file = File::open(path).unwrap();
+        let file = File::open(path)?;
         let stream_handle = rodio::OutputStreamBuilder::open_default_stream().unwrap();
         let sink = rodio::Sink::connect_new(stream_handle.mixer());
         let source = rodio::Decoder::try_from(file)?;

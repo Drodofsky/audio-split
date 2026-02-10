@@ -27,6 +27,18 @@ async fn open_file_failed_wrong_media_type() {
     let mut ui = simulator(audio_split.view());
     ui.find(DebugId::ErrorAudioDecoder.id()).unwrap();
 }
+#[tokio::test]
+async fn open_file_failed_wrong_media_path() {
+    let mut audio_split = AudioSplit::init();
+
+    let task = audio_split.update(Message::AudioFilePathLoaded(Some(
+        "media/no_a_file.mp3".into(),
+    )));
+    execute_tasks(task, &mut audio_split).await;
+
+    let mut ui = simulator(audio_split.view());
+    ui.find(DebugId::ErrorIO.id()).unwrap();
+}
 
 #[tokio::test]
 async fn test_drop_file() {

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 use super::debug_id::DebugId;
 #[derive(Debug, Clone)]
@@ -19,6 +19,7 @@ impl Error {
 #[derive(Debug, Clone)]
 pub enum ErrorKind {
     AudioDecoder(rodio::decoder::DecoderError),
+    IO(Arc<std::io::Error>),
 }
 impl From<rodio::decoder::DecoderError> for Error {
     fn from(value: rodio::decoder::DecoderError) -> Self {
@@ -26,10 +27,17 @@ impl From<rodio::decoder::DecoderError> for Error {
     }
 }
 
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Error::new(ErrorKind::IO(Arc::new(value)), DebugId::ErrorIO)
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.kind {
+        match &self.kind {
             ErrorKind::AudioDecoder(_) => write!(f, "failed to decode audio file"),
+            ErrorKind::IO(io) => write!(f, "{}", io),
         }
     }
 }
