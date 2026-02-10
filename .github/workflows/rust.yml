@@ -20,10 +20,12 @@ jobs:
           - os: ubuntu-latest 
           - os: windows-latest
           - os: macos-15-intel
+          - os: macos-latest
 
     steps:
     - uses: actions/checkout@v4
     - name: Setup FFmpeg
+      if: runner.os != 'macOS'
       uses: FedericoCarboni/setup-ffmpeg@v3
     - name: Install system dependencies (Linux)
       if: runner.os == 'Linux'
@@ -31,6 +33,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y pkg-config libasound2-dev
         sudo apt-get install -y pulseaudio pulseaudio-utils
+    
+    - name: Install FFmpeg (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install ffmpeg
+        ffmpeg -version
     - name: Build
       run: cargo build --verbose
     - name: Run tests
