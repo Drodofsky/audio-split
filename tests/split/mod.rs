@@ -19,5 +19,5 @@ async fn warn_when_no_splice_is_selected() {
         execute_tasks(task, &mut audio_split).await;
     }
     let mut ui = simulator(audio_split.view());
-    ui.find(DebugId::WarningNoSpliceSelected.id()).unwrap();
+    ui.find(DebugId::WarningNoSplitPointSelected.id()).unwrap();
 }

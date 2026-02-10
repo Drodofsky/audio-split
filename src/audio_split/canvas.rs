@@ -28,11 +28,11 @@ impl canvas::Program<Message> for AudioSpan {
                 state.hovered = None;
                 return None;
             }
-            for (index, splice) in self.splices().iter().enumerate() {
+            for (index, splice) in self.split_points().iter().enumerate() {
                 let x_percentage = get_x_percentage(*splice, self.start(), self.end());
                 if f32::abs(cursor_position.x - (x_percentage * bounds.width)) <= 5.5 {
                     if let iced::Event::Mouse(iced::mouse::Event::ButtonPressed(_)) = event {
-                        return Some(canvas::Action::publish(Message::ClickSplice(*splice)));
+                        return Some(canvas::Action::publish(Message::ClickSplitPoint(*splice)));
                     } else {
                         state.hovered = Some(index);
                         hovered = true;
@@ -80,13 +80,13 @@ impl canvas::Program<Message> for AudioSpan {
             theme.extended_palette().secondary.strong.color,
         );
 
-        for (index, splice) in self.splices().iter().enumerate() {
+        for (index, splice) in self.split_points().iter().enumerate() {
             let x_pos_percentage = get_x_percentage(*splice, self.start(), self.end());
             let splice_line = Path::rectangle(
                 Point::new(bounds.width * x_pos_percentage - 5.0, y_center - 10.0),
                 Size::new(10.0, 20.0),
             );
-            if self.selected_splices().contains(splice) {
+            if self.selected_split_points().contains(splice) {
                 frame.fill(&splice_line, theme.extended_palette().danger.base.color);
             } else {
                 frame.fill(&splice_line, theme.extended_palette().primary.base.color);

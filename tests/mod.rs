@@ -1,3 +1,4 @@
+mod analyze;
 mod audio_file;
 mod play_pause;
 mod split;

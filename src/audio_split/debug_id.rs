@@ -4,8 +4,10 @@ use strum_macros::IntoStaticStr;
 #[derive(Debug, Clone, Copy, IntoStaticStr)]
 pub enum DebugId {
     InfoAudioLoaded,
+    InfoSplitPointsSelected(usize),
     WarningNoAudioLoaded,
-    WarningNoSpliceSelected,
+    WarningNoSplitPointFound,
+    WarningNoSplitPointSelected,
     ErrorAudioDecoder,
     ErrorIO,
     ButtonOpen,
@@ -21,6 +23,7 @@ impl From<DebugId> for Id {
     fn from(value: DebugId) -> Self {
         match value {
             DebugId::ButtonDelete(v) => Id::from(format!("ButtonDelete:{v}")),
+            DebugId::InfoSplitPointsSelected(v) => Id::from(format!("InfoSplitPointsSelected:{v}")),
             _ => Id::new(value.into()),
         }
     }

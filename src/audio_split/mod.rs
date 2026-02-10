@@ -134,12 +134,12 @@ impl AudioSplit {
             }
             Message::Split => {
                 if let Some(audio) = self.audio.as_mut() {
-                    if audio.splices_selected() {
+                    if audio.split_points_selected() {
                         audio.split();
                     } else {
                         self.set_warning(
-                            warning::NO_SPLICE_SELECTED,
-                            DebugId::WarningNoSpliceSelected,
+                            warning::NO_SPLIT_POINT_SELECTED,
+                            DebugId::WarningNoSplitPointSelected,
                         );
                     }
                 } else {
@@ -183,13 +183,26 @@ impl AudioSplit {
             }
             Message::Analyzed(s) => {
                 if let Some(audio) = self.audio.as_mut() {
-                    Audio::set_splices(audio.spans_mut(), s.unwrap());
+                    let split_points = s.unwrap();
+                    let len = split_points.len();
+                    Audio::set_split_points(audio.spans_mut(), split_points);
+                    if len == 0 {
+                        self.set_warning(
+                            warning::NO_SPLIT_POINTS_FOUND,
+                            DebugId::WarningNoSplitPointFound,
+                        );
+                    } else {
+                        self.set_info(
+                            info::SPLIT_POINTS_DETECTED.replace("{}", &len.to_string()),
+                            DebugId::InfoSplitPointsSelected(len),
+                        );
+                    }
                 }
                 Task::none()
             }
-            Message::ClickSplice(splice) => {
+            Message::ClickSplitPoint(split_point) => {
                 if let Some(audio) = self.audio.as_mut() {
-                    audio.toggle_selected_splice(splice);
+                    audio.toggle_selected_split_points(split_point);
                 }
                 Task::none()
             }
@@ -307,7 +320,7 @@ pub enum Message {
     WindowEvent(iced::window::Event),
     Analyze,
     Analyzed(Result<Vec<Duration>, Error>),
-    ClickSplice(Duration),
+    ClickSplitPoint(Duration),
     UpdateDuration(String),
     UpdateThreshold(String),
     AudioSaved(Result<(), Error>),
@@ -330,21 +343,21 @@ mod test {
         assert!(span.contains(Duration::from_secs_f32(12.6)))
     }
     #[test]
-    fn set_splices_1() {
-        let splices = vec![
+    fn set_split_points_1() {
+        let split_points = vec![
             Duration::from_secs_f32(12.5),
             Duration::from_secs_f32(15.5),
             Duration::from_secs_f32(17.5),
             Duration::from_secs_f32(28.5),
         ];
-        let control = splices.clone();
+        let control = split_points.clone();
         let mut spans = vec![AudioSpan::new(
             0,
             Duration::from_secs_f32(0.0),
             Duration::from_secs_f32(30.0),
             String::new(),
         )];
-        Audio::set_splices(&mut spans, splices);
-        assert_eq!(spans[0].splices(), control);
+        Audio::set_split_points(&mut spans, split_points);
+        assert_eq!(spans[0].split_points(), control);
     }
 }

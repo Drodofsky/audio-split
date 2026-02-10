@@ -11,8 +11,8 @@ pub struct AudioSpan {
     end: Duration,
     name: String,
     position: f32,
-    splices: Vec<Duration>,
-    selected_splices: Vec<Duration>,
+    split_points: Vec<Duration>,
+    selected_split_points: Vec<Duration>,
 }
 
 impl AudioSpan {
@@ -23,8 +23,8 @@ impl AudioSpan {
             end,
             name,
             position: start.as_secs_f32(),
-            splices: Vec::new(),
-            selected_splices: Vec::new(),
+            split_points: Vec::new(),
+            selected_split_points: Vec::new(),
         }
     }
     pub fn view(&self) -> Element<'_, Message> {
@@ -63,11 +63,11 @@ impl AudioSpan {
     pub fn id(&self) -> u32 {
         self.id
     }
-    pub fn splices(&self) -> &[Duration] {
-        &self.splices
+    pub fn split_points(&self) -> &[Duration] {
+        &self.split_points
     }
-    pub fn selected_splices(&self) -> &[Duration] {
-        &self.selected_splices
+    pub fn selected_split_points(&self) -> &[Duration] {
+        &self.selected_split_points
     }
     pub fn position(&self) -> Duration {
         Duration::from_secs_f32(self.position)
@@ -98,33 +98,33 @@ impl AudioSpan {
         );
         Length::Fixed(size)
     }
-    pub fn insert_splice(&mut self, splice: Duration) -> bool {
-        let fits = self.contains(splice);
+    pub fn insert_split_point(&mut self, split_point: Duration) -> bool {
+        let fits = self.contains(split_point);
         if fits {
-            self.splices.insert(0, splice);
+            self.split_points.insert(0, split_point);
         }
         fits
     }
-    pub fn toggle_splice_selection(&mut self, splice: Duration) -> bool {
-        let fits = self.contains(splice);
+    pub fn toggle_split_point_selection(&mut self, split_point: Duration) -> bool {
+        let fits = self.contains(split_point);
         if fits {
             if let Some((i, _)) = self
-                .selected_splices
+                .selected_split_points
                 .iter()
                 .enumerate()
-                .find(|(_, s)| **s == splice)
+                .find(|(_, s)| **s == split_point)
             {
-                self.selected_splices.remove(i);
+                self.selected_split_points.remove(i);
             } else {
-                self.selected_splices.push(splice);
+                self.selected_split_points.push(split_point);
             }
         }
         fits
     }
-    pub fn clear_splices(&mut self) {
-        self.splices.clear();
+    pub fn clear_split_points(&mut self) {
+        self.split_points.clear();
     }
-    pub fn splices_selected(&self) -> bool {
-        !self.selected_splices.is_empty()
+    pub fn split_points_selected(&self) -> bool {
+        !self.selected_split_points.is_empty()
     }
 }

@@ -83,7 +83,7 @@ impl Audio {
         let mut splits: Vec<Duration> = self
             .spans
             .iter()
-            .map(|s| s.selected_splices().iter())
+            .map(|s| s.selected_split_points().iter())
             .flatten()
             .map(|s| *s)
             .collect();
@@ -103,7 +103,7 @@ impl Audio {
         let end = span.end();
         let name = span.name().to_string();
         let id = span.id();
-        let splices = span.splices().to_vec();
+        let split_points = span.split_points().to_vec();
         let mut span_1 = AudioSpan::new(id, start, pos, name);
         self.index_counter += 1;
         let mut span_2 = AudioSpan::new(
@@ -112,9 +112,9 @@ impl Audio {
             end,
             format!("{}_{}", self.file_name, self.index_counter),
         );
-        for splice in splices {
-            span_1.insert_splice(splice);
-            span_2.insert_splice(splice);
+        for split_point in split_points {
+            span_1.insert_split_point(split_point);
+            span_2.insert_split_point(split_point);
         }
 
         self.spans.remove(index);
@@ -136,27 +136,30 @@ impl Audio {
         self.spans.iter_mut().find(|s| s.id() == id)
     }
     // spices must be sorted
-    pub fn set_splices(spans: &mut [AudioSpan], mut splices: Vec<Duration>) {
-        spans.iter_mut().for_each(|s| s.clear_splices());
+    pub fn set_split_points(spans: &mut [AudioSpan], mut split_points: Vec<Duration>) {
+        spans.iter_mut().for_each(|s| s.clear_split_points());
         for span in spans.iter_mut().rev() {
-            while let Some(last) = splices.last() {
-                if span.insert_splice(*last) {
-                    splices.pop();
+            while let Some(last) = split_points.last() {
+                if span.insert_split_point(*last) {
+                    split_points.pop();
                 } else {
                     break;
                 }
             }
         }
     }
-    pub fn toggle_selected_splice(&mut self, splice: Duration) {
+    pub fn toggle_selected_split_points(&mut self, split_point: Duration) {
         for span in self.spans.iter_mut() {
-            if span.toggle_splice_selection(splice) == true {
+            if span.toggle_split_point_selection(split_point) == true {
                 return;
             }
         }
     }
-    pub fn splices_selected(&self) -> bool {
-        self.spans.iter().find(|a| a.splices_selected()).is_some()
+    pub fn split_points_selected(&self) -> bool {
+        self.spans
+            .iter()
+            .find(|a| a.split_points_selected())
+            .is_some()
     }
 }
 
