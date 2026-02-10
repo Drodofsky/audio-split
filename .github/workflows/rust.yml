@@ -21,6 +21,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y pkg-config libasound2-dev
         sudo apt-get install -y pulseaudio pulseaudio-utils
+        sudo apt-get install -y ffmpeg
     - name: setup audio
       run: |
          export XDG_RUNTIME_DIR=/tmp/xdg-runtime
