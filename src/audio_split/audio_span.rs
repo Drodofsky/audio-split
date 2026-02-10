@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use iced::{Element, Length, widget};
 
-use super::Message;
+use super::{Message, debug_id::DebugId};
 
 #[derive(Debug, Clone)]
 pub struct AudioSpan {
@@ -38,9 +38,12 @@ impl AudioSpan {
                 ),
                 widget::text_input("", &self.name)
                     .on_input(|t| Message::SpanTextUpdate(self.id, t)),
-                widget::button("delete")
-                    .style(widget::button::danger)
-                    .on_press(Message::DeleteAudioSpan(self.id))
+                widget::container(
+                    widget::button("delete")
+                        .style(widget::button::danger)
+                        .on_press(Message::DeleteAudioSpan(self.id))
+                )
+                .id(DebugId::ButtonDelete(self.id))
             ]
             .spacing(5),
         )

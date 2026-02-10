@@ -191,19 +191,27 @@ impl AudioSplit {
     }
     fn view_top(&self) -> Element<'_, Message> {
         widget::row![
-            widget::button("open audio file").on_press(Message::OpenAudioFileDialog),
+            widget::container(
+                widget::button("open audio file").on_press(Message::OpenAudioFileDialog)
+            )
+            .id(DebugId::ButtonOpen),
             if self.is_playing {
-                widget::button("pause").on_press(Message::Pause)
+                widget::container(widget::button("pause").on_press(Message::Pause))
+                    .id(DebugId::ButtonPause)
             } else {
-                widget::button("play").on_press(Message::Play)
+                widget::container(widget::button("play").on_press(Message::Play))
+                    .id(DebugId::ButtonPlay)
             },
             widget::text("threshold in dB:"),
             widget::text_input("", &self.threshold).on_input(Message::UpdateThreshold),
             widget::text("duration in sec:"),
             widget::text_input("", &self.duration).on_input(Message::UpdateDuration),
-            widget::button("analyze").on_press(Message::Analyze),
-            widget::button("split").on_press(Message::Split),
-            widget::button("export").on_press(Message::OpenExportDialog),
+            widget::container(widget::button("analyze").on_press(Message::Analyze))
+                .id(DebugId::ButtonAnalyze),
+            widget::container(widget::button("split").on_press(Message::Split))
+                .id(DebugId::ButtonSplit),
+            widget::container(widget::button("export").on_press(Message::OpenExportDialog))
+                .id(DebugId::ButtonExport),
         ]
         .spacing(5)
         .align_y(Vertical::Center)

@@ -6,11 +6,21 @@ pub enum DebugId {
     InfoAudioLoaded,
     WarningNoAudioLoaded,
     ErrorAudioDecoder,
+    ButtonOpen,
+    ButtonPlay,
+    ButtonPause,
+    ButtonAnalyze,
+    ButtonSplit,
+    ButtonExport,
+    ButtonDelete(u32),
 }
 
 impl From<DebugId> for Id {
     fn from(value: DebugId) -> Self {
-        Id::new(value.into())
+        match value {
+            DebugId::ButtonDelete(v) => Id::from(format!("ButtonDelete:{v}")),
+            _ => Id::new(value.into()),
+        }
     }
 }
 impl DebugId {
