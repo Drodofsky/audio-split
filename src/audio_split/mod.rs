@@ -1,3 +1,4 @@
+pub mod audio_player;
 use std::{path::PathBuf, time::Duration};
 
 use iced::{Element, Length, Subscription, Task, alignment::Vertical, widget, window::Event};
@@ -5,6 +6,7 @@ use iced::{Element, Length, Subscription, Task, alignment::Vertical, widget, win
 use crate::audio_split::{
     analyze::detect_silence,
     audio::Audio,
+    audio_player::AudioPlayer,
     audio_span::AudioSpan,
     error::Error,
     user_info::{UserInfo, info, warning},
@@ -15,14 +17,15 @@ mod audio;
 mod audio_span;
 mod canvas;
 mod debug_id;
-mod error;
+pub mod error;
 mod user_info;
 mod utils;
 
 pub use debug_id::DebugId;
 
-#[derive(Debug, Default)]
-pub struct AudioSplit {
+#[derive(Debug)]
+pub struct AudioSplit<P: AudioPlayer> {
+    audio_player: P,
     audio: Option<Audio>,
     is_playing: bool,
     import_path: Option<PathBuf>,
@@ -33,12 +36,19 @@ pub struct AudioSplit {
     info: UserInfo,
 }
 
-impl AudioSplit {
-    pub fn init() -> Self {
-        let mut s = Self::default();
-        s.duration = "0.3".to_string();
-        s.threshold = "-45.0".to_string();
-        s
+impl<P: AudioPlayer> AudioSplit<P> {
+    pub fn init(audio_player: P) -> Self {
+        Self {
+            audio_player,
+            audio: None,
+            is_playing: false,
+            import_path: None,
+            export_path: None,
+            duration: "0.3".to_string(),
+            threshold: "-45.0".to_string(),
+            extension: None,
+            info: UserInfo::None,
+        }
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
@@ -66,7 +76,10 @@ impl AudioSplit {
                 if let Some(path) = path {
                     self.import_path = Some(path.clone().into());
                     self.extension = PathBuf::from(path.clone()).extension().map(|s| s.into());
-                    Task::perform(open_audio_file(path), Message::AudioLoaded)
+                    Task::perform(
+                        open_audio_file(path, self.audio_player.get_sink()),
+                        Message::AudioLoaded,
+                    )
                 } else {
                     Task::none()
                 }
@@ -162,7 +175,10 @@ impl AudioSplit {
             Message::WindowEvent(e) => match e {
                 Event::FileDropped(f) => {
                     self.import_path = Some(f.clone());
-                    Task::perform(open_audio_file(f), Message::AudioLoaded)
+                    Task::perform(
+                        open_audio_file(f, self.audio_player.get_sink()),
+                        Message::AudioLoaded,
+                    )
                 }
                 _ => Task::none(),
             },

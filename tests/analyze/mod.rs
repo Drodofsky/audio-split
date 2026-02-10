@@ -1,10 +1,10 @@
-use crate::execute_tasks;
+use crate::{execute_tasks, init};
 use audio_split::*;
 use iced_test::simulator;
 
 #[tokio::test]
 async fn splits_detected() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),
@@ -24,7 +24,7 @@ async fn splits_detected() {
 
 #[tokio::test]
 async fn no_splits_detected() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),

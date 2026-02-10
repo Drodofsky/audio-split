@@ -7,22 +7,15 @@ use super::{Message, audio_span::AudioSpan};
 #[derive(Clone)]
 pub struct Audio {
     sink: Arc<rodio::Sink>,
-    _stream_handle: Arc<rodio::OutputStream>,
     spans: Vec<AudioSpan>,
     file_name: String,
     index_counter: u32,
 }
 
 impl Audio {
-    pub fn new(
-        sink: rodio::Sink,
-        stream_handle: rodio::OutputStream,
-        span: AudioSpan,
-        file_name: String,
-    ) -> Self {
+    pub fn new(sink: Arc<rodio::Sink>, span: AudioSpan, file_name: String) -> Self {
         Self {
-            sink: Arc::new(sink),
-            _stream_handle: Arc::new(stream_handle),
+            sink,
             spans: vec![span],
             file_name,
             index_counter: 0,

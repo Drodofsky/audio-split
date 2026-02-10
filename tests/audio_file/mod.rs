@@ -1,10 +1,10 @@
-use crate::execute_tasks;
+use crate::{execute_tasks, init};
 use audio_split::*;
 use iced_test::simulator;
 
 #[tokio::test]
 async fn open_file_success() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),
@@ -17,7 +17,7 @@ async fn open_file_success() {
 
 #[tokio::test]
 async fn open_file_failed_wrong_media_type() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/audio_split.gif".into(),
@@ -29,7 +29,7 @@ async fn open_file_failed_wrong_media_type() {
 }
 #[tokio::test]
 async fn open_file_failed_wrong_media_path() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/no_a_file.mp3".into(),
@@ -42,7 +42,7 @@ async fn open_file_failed_wrong_media_path() {
 
 #[tokio::test]
 async fn test_drop_file() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::WindowEvent(iced::window::Event::FileDropped(
         "media/LibriVox_00.mp3".into(),
@@ -55,7 +55,7 @@ async fn test_drop_file() {
 
 #[tokio::test]
 async fn no_audio_file_loaded_play_btn() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
     let mut ui = simulator(audio_split.view());
     ui.click(DebugId::ButtonPlay.id()).unwrap();
     for message in ui.into_messages() {
@@ -68,7 +68,7 @@ async fn no_audio_file_loaded_play_btn() {
 }
 #[tokio::test]
 async fn no_audio_file_loaded_analyze_btn() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
     let mut ui = simulator(audio_split.view());
     ui.click(DebugId::ButtonAnalyze.id()).unwrap();
     for message in ui.into_messages() {
@@ -82,7 +82,7 @@ async fn no_audio_file_loaded_analyze_btn() {
 
 #[tokio::test]
 async fn no_audio_file_loaded_split_btn() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
     let mut ui = simulator(audio_split.view());
     ui.click(DebugId::ButtonSplit.id()).unwrap();
     for message in ui.into_messages() {
@@ -96,7 +96,7 @@ async fn no_audio_file_loaded_split_btn() {
 
 #[tokio::test]
 async fn no_audio_file_loaded_export_btn() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
     let mut ui = simulator(audio_split.view());
     ui.click(DebugId::ButtonExport.id()).unwrap();
     for message in ui.into_messages() {

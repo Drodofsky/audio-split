@@ -1,8 +1,8 @@
-use std::{fs::File, path::PathBuf, time::Duration};
+use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
 
 use crate::audio_split::{audio::Audio, audio_span::AudioSpan, error::Error};
 use rfd::AsyncFileDialog;
-use rodio::Source;
+use rodio::{Sink, Source};
 use tokio::process::Command;
 
 pub async fn open_audio_file_dialog(starting_path: Option<PathBuf>) -> Option<String> {
@@ -62,19 +62,21 @@ fn fmt_duration(duration: Duration) -> String {
     format!("{:.6}", duration.as_secs_f32())
 }
 
-pub async fn open_audio_file(path: impl Into<PathBuf> + Send + 'static) -> Result<Audio, Error> {
+pub async fn open_audio_file(
+    path: impl Into<PathBuf> + Send + 'static,
+    sink: Arc<Sink>,
+) -> Result<Audio, Error> {
     tokio::task::spawn_blocking(|| {
         let path: PathBuf = path.into();
         let file_name: String = path.file_prefix().unwrap().display().to_string();
         let file = File::open(path)?;
-        let stream_handle = rodio::OutputStreamBuilder::open_default_stream().unwrap();
-        let sink = rodio::Sink::connect_new(stream_handle.mixer());
         let source = rodio::Decoder::try_from(file)?;
         let length = source.total_duration().unwrap();
+        sink.skip_one();
         sink.append(source);
         let span = AudioSpan::new(0, Duration::new(0, 0), length, format!("{file_name}_0"));
 
-        Ok(Audio::new(sink, stream_handle, span, file_name))
+        Ok(Audio::new(sink, span, file_name))
     })
     .await
     .unwrap()

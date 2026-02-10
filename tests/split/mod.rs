@@ -1,10 +1,10 @@
-use crate::execute_tasks;
+use crate::{execute_tasks, init};
 use audio_split::*;
 use iced_test::simulator;
 
 #[tokio::test]
 async fn warn_when_no_splice_is_selected() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),

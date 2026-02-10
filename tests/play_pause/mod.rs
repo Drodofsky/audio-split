@@ -1,10 +1,10 @@
-use crate::execute_tasks;
+use crate::{execute_tasks, init};
 use audio_split::*;
 use iced_test::simulator;
 
 #[tokio::test]
 async fn playing_on_clean_load() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),
@@ -16,7 +16,7 @@ async fn playing_on_clean_load() {
 }
 #[tokio::test]
 async fn press_pause_while_playing() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),
@@ -36,7 +36,7 @@ async fn press_pause_while_playing() {
 
 #[tokio::test]
 async fn press_play_while_paused() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),
@@ -63,7 +63,7 @@ async fn press_play_while_paused() {
 
 #[tokio::test]
 async fn auto_playing_when_new_media_loaded() {
-    let mut audio_split = AudioSplit::init();
+    let mut audio_split = init();
 
     let task = audio_split.update(Message::AudioFilePathLoaded(Some(
         "media/LibriVox_00.mp3".into(),
