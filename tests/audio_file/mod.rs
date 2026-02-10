@@ -52,3 +52,58 @@ async fn test_drop_file() {
     let mut ui = simulator(audio_split.view());
     ui.find(DebugId::InfoAudioLoaded.id()).unwrap();
 }
+
+#[tokio::test]
+async fn no_audio_file_loaded_play_btn() {
+    let mut audio_split = AudioSplit::init();
+    let mut ui = simulator(audio_split.view());
+    ui.click(DebugId::ButtonPlay.id()).unwrap();
+    for message in ui.into_messages() {
+        let task = audio_split.update(message);
+        execute_tasks(task, &mut audio_split).await;
+    }
+
+    let mut ui = simulator(audio_split.view());
+    ui.find(DebugId::WarningNoAudioLoaded.id()).unwrap();
+}
+#[tokio::test]
+async fn no_audio_file_loaded_analyze_btn() {
+    let mut audio_split = AudioSplit::init();
+    let mut ui = simulator(audio_split.view());
+    ui.click(DebugId::ButtonAnalyze.id()).unwrap();
+    for message in ui.into_messages() {
+        let task = audio_split.update(message);
+        execute_tasks(task, &mut audio_split).await;
+    }
+
+    let mut ui = simulator(audio_split.view());
+    ui.find(DebugId::WarningNoAudioLoaded.id()).unwrap();
+}
+
+#[tokio::test]
+async fn no_audio_file_loaded_split_btn() {
+    let mut audio_split = AudioSplit::init();
+    let mut ui = simulator(audio_split.view());
+    ui.click(DebugId::ButtonSplit.id()).unwrap();
+    for message in ui.into_messages() {
+        let task = audio_split.update(message);
+        execute_tasks(task, &mut audio_split).await;
+    }
+
+    let mut ui = simulator(audio_split.view());
+    ui.find(DebugId::WarningNoAudioLoaded.id()).unwrap();
+}
+
+#[tokio::test]
+async fn no_audio_file_loaded_export_btn() {
+    let mut audio_split = AudioSplit::init();
+    let mut ui = simulator(audio_split.view());
+    ui.click(DebugId::ButtonExport.id()).unwrap();
+    for message in ui.into_messages() {
+        let task = audio_split.update(message);
+        execute_tasks(task, &mut audio_split).await;
+    }
+
+    let mut ui = simulator(audio_split.view());
+    ui.find(DebugId::WarningNoAudioLoaded.id()).unwrap();
+}

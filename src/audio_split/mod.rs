@@ -7,7 +7,7 @@ use crate::audio_split::{
     audio::Audio,
     audio_span::AudioSpan,
     error::Error,
-    user_info::{UserInfo, info::AUDIO_LOADED, warning::NO_AUDIO_LOADED},
+    user_info::{UserInfo, info, warning},
     utils::{open_audio_file, open_audio_file_dialog, open_export_folder_dialog, save_audio_files},
 };
 mod analyze;
@@ -51,10 +51,17 @@ impl AudioSplit {
                 ),
                 Message::AudioFilePathLoaded,
             ),
-            Message::OpenExportDialog => Task::perform(
-                open_export_folder_dialog(self.export_path.clone()),
-                Message::ExportPathLoaded,
-            ),
+            Message::OpenExportDialog => {
+                if self.audio.is_some() {
+                    Task::perform(
+                        open_export_folder_dialog(self.export_path.clone()),
+                        Message::ExportPathLoaded,
+                    )
+                } else {
+                    self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
+                    Task::none()
+                }
+            }
             Message::AudioFilePathLoaded(path) => {
                 if let Some(path) = path {
                     self.import_path = Some(path.clone().into());
@@ -112,7 +119,7 @@ impl AudioSplit {
                 if let Some(audio) = self.audio.as_mut() {
                     audio.set_pause();
                 } else {
-                    self.set_warning(NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
+                    self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                 }
                 Task::none()
             }
@@ -121,13 +128,15 @@ impl AudioSplit {
                 if let Some(audio) = self.audio.as_mut() {
                     audio.set_play();
                 } else {
-                    self.set_warning(NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
+                    self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                 }
                 Task::none()
             }
             Message::Split => {
                 if let Some(audio) = self.audio.as_mut() {
                     audio.split();
+                } else {
+                    self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                 }
                 Task::none()
             }
@@ -161,6 +170,7 @@ impl AudioSplit {
                         |a| Message::Analyzed(a),
                     )
                 } else {
+                    self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                     Task::none()
                 }
             }
@@ -257,7 +267,7 @@ impl AudioSplit {
     pub fn set_audio(&mut self, audio: Audio) {
         self.audio = Some(audio);
         self.is_playing = true;
-        self.set_info(AUDIO_LOADED, DebugId::InfoAudioLoaded);
+        self.set_info(info::AUDIO_LOADED, DebugId::InfoAudioLoaded);
     }
     fn apply_result_and<T>(&mut self, value: Result<T, Error>, mut then: impl FnMut(&mut Self, T)) {
         match value {
