@@ -124,4 +124,7 @@ impl AudioSpan {
     pub fn clear_splices(&mut self) {
         self.splices.clear();
     }
+    pub fn splices_selected(&self) -> bool {
+        !self.selected_splices.is_empty()
+    }
 }

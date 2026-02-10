@@ -5,6 +5,7 @@ use strum_macros::IntoStaticStr;
 pub enum DebugId {
     InfoAudioLoaded,
     WarningNoAudioLoaded,
+    WarningNoSpliceSelected,
     ErrorAudioDecoder,
     ErrorIO,
     ButtonOpen,

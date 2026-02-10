@@ -155,6 +155,9 @@ impl Audio {
             }
         }
     }
+    pub fn splices_selected(&self) -> bool {
+        self.spans.iter().find(|a| a.splices_selected()).is_some()
+    }
 }
 
 impl fmt::Debug for Audio {

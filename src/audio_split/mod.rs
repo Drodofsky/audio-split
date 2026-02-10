@@ -134,7 +134,14 @@ impl AudioSplit {
             }
             Message::Split => {
                 if let Some(audio) = self.audio.as_mut() {
-                    audio.split();
+                    if audio.splices_selected() {
+                        audio.split();
+                    } else {
+                        self.set_warning(
+                            warning::NO_SPLICE_SELECTED,
+                            DebugId::WarningNoSpliceSelected,
+                        );
+                    }
                 } else {
                     self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                 }

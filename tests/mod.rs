@@ -1,5 +1,6 @@
 mod audio_file;
 mod play_pause;
+mod split;
 use audio_split::*;
 use iced::{Task, futures::StreamExt};
 use iced_runtime::task::into_stream;

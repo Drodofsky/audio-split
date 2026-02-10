@@ -14,5 +14,7 @@ pub mod info {
 }
 
 pub mod warning {
-    pub const NO_AUDIO_LOADED: &str = "no audio file loaded";
+    pub const NO_AUDIO_LOADED: &str = "No audio file loaded. Please open an audio file first.";
+    pub const NO_SPLICE_SELECTED: &str =
+        "No splice selected. Please analyze the audio first and then select splices to cut.";
 }
