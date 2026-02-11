@@ -294,7 +294,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
         .into()
     }
     pub fn subscription(&self) -> Subscription<Message> {
-        let tick = iced::time::every(Duration::from_millis(100)).map(|_| Message::Tick);
+        let tick = iced::time::every(Duration::from_millis(16)).map(|_| Message::Tick);
         Subscription::batch([
             tick,
             iced::window::events().map(|f| Message::WindowEvent(f.1)),
