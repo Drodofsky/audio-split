@@ -10,6 +10,8 @@ pub enum DebugId {
     WarningNoSplitPointSelected,
     ErrorAudioDecoder,
     ErrorIO,
+    ErrorParseFloat,
+    ErrorNegativeDuration,
     ButtonOpen,
     ButtonPlay,
     ButtonPause,
@@ -17,6 +19,8 @@ pub enum DebugId {
     ButtonSplit,
     ButtonExport,
     ButtonDelete(u32),
+    TextInputThreshold,
+    TextInputDuration,
 }
 
 impl From<DebugId> for Id {

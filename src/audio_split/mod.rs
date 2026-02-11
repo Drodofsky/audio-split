@@ -1,5 +1,5 @@
 pub mod audio_player;
-use std::{path::PathBuf, time::Duration};
+use std::{num::ParseFloatError, path::PathBuf, time::Duration};
 
 use iced::{Element, Length, Subscription, Task, alignment::Vertical, widget, window::Event};
 
@@ -184,14 +184,22 @@ impl<P: AudioPlayer> AudioSplit<P> {
             },
             Message::Analyze => {
                 if let Some(path) = self.import_path.clone() {
-                    Task::perform(
-                        detect_silence(
-                            path,
-                            self.threshold.parse().unwrap(),
-                            Duration::from_secs_f32(self.duration.parse().unwrap()),
-                        ),
-                        |a| Message::Analyzed(a),
-                    )
+                    if let Some(duration) = self
+                        .apply_result(self.duration.parse().map_err(|e: ParseFloatError| e.into()))
+                        && let Some(threshold) = self.apply_result(
+                            self.threshold
+                                .parse()
+                                .map_err(|e: ParseFloatError| e.into()),
+                        )
+                        && self.check_duration(duration)
+                    {
+                        Task::perform(
+                            detect_silence(path, threshold, Duration::from_secs_f32(duration)),
+                            |a| Message::Analyzed(a),
+                        )
+                    } else {
+                        Task::none()
+                    }
                 } else {
                     self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
                     Task::none()
@@ -249,9 +257,13 @@ impl<P: AudioPlayer> AudioSplit<P> {
                     .id(DebugId::ButtonPlay)
             },
             widget::text("threshold in dB:"),
-            widget::text_input("", &self.threshold).on_input(Message::UpdateThreshold),
+            widget::text_input("", &self.threshold)
+                .on_input(Message::UpdateThreshold)
+                .id(DebugId::TextInputThreshold),
             widget::text("duration in sec:"),
-            widget::text_input("", &self.duration).on_input(Message::UpdateDuration),
+            widget::text_input("", &self.duration)
+                .on_input(Message::UpdateDuration)
+                .id(DebugId::TextInputDuration),
             widget::container(widget::button("analyze").on_press(Message::Analyze))
                 .id(DebugId::ButtonAnalyze),
             widget::container(widget::button("split").on_press(Message::Split))
@@ -305,10 +317,30 @@ impl<P: AudioPlayer> AudioSplit<P> {
         self.is_playing = true;
         self.set_info(info::AUDIO_LOADED, DebugId::InfoAudioLoaded);
     }
+    fn apply_result<T>(&mut self, value: Result<T, Error>) -> Option<T> {
+        match value {
+            Ok(v) => Some(v),
+            Err(e) => {
+                self.info = UserInfo::Error(e);
+                None
+            }
+        }
+    }
     fn apply_result_and<T>(&mut self, value: Result<T, Error>, mut then: impl FnMut(&mut Self, T)) {
         match value {
             Ok(v) => then(self, v),
             Err(e) => self.info = UserInfo::Error(e),
+        }
+    }
+    fn check_duration(&mut self, duration: f32) -> bool {
+        if duration.is_sign_negative() {
+            self.apply_result::<()>(Err(Error::new(
+                error::ErrorKind::NegativeDuration,
+                DebugId::ErrorNegativeDuration,
+            )));
+            false
+        } else {
+            true
         }
     }
     fn set_warning(&mut self, warning: impl Into<String>, id: DebugId) {

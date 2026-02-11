@@ -2,6 +2,7 @@ mod analyze;
 mod audio_file;
 mod play_pause;
 mod split;
+mod text_input;
 use std::{
     sync::{Arc, atomic::AtomicBool},
     thread::{self, JoinHandle},
