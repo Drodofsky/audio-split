@@ -2,12 +2,16 @@ mod analyze;
 mod audio_file;
 mod play_pause;
 mod split;
-use std::sync::Arc;
+use std::{
+    sync::{Arc, atomic::AtomicBool},
+    thread::{self, JoinHandle},
+    time::Duration,
+};
 
 use audio_split::{audio_player::AudioPlayer, error::Error, *};
 use iced::{Task, futures::StreamExt};
 use iced_runtime::task::into_stream;
-use rodio::{Sink, queue::SourcesQueueOutput};
+use rodio::Sink;
 pub async fn execute_task(task: Task<Message>) -> Vec<Message> {
     let mut messages = Vec::new();
 
@@ -32,19 +36,44 @@ pub async fn execute_tasks<P: AudioPlayer>(task: Task<Message>, audio_split: &mu
 
 pub struct TestPlayer {
     sink: Arc<rodio::Sink>,
-    _source_queue_output: SourcesQueueOutput,
+    stop: Arc<AtomicBool>,
+    drain_thread: Option<JoinHandle<()>>,
 }
 
 impl AudioPlayer for TestPlayer {
     fn init() -> Result<Self, Error> {
-        let (sink, source_queue_output) = Sink::new();
+        let (sink, mut source_queue_output) = Sink::new();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop2 = stop.clone();
+        let drain_thread = thread::spawn(move || {
+            // Tune these:
+            let block_samples = 1024usize;
+            let nap = Duration::from_millis(5);
+
+            while !stop2.load(std::sync::atomic::Ordering::Relaxed) {
+                for _ in 0..block_samples {
+                    let _ = source_queue_output.next();
+                }
+                thread::sleep(nap);
+            }
+        });
         Ok(Self {
             sink: Arc::new(sink),
-            _source_queue_output: source_queue_output,
+            stop,
+            drain_thread: Some(drain_thread),
         })
     }
     fn get_sink(&self) -> Arc<Sink> {
         self.sink.clone()
+    }
+}
+
+impl Drop for TestPlayer {
+    fn drop(&mut self) {
+        self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        if let Some(h) = self.drain_thread.take() {
+            let _ = h.join();
+        }
     }
 }
 
