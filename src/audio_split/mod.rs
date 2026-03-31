@@ -123,7 +123,6 @@ impl<P: AudioPlayer> AudioSplit<P> {
                         && let Some(sub) = (last.end().checked_sub(audio.get_pos()))
                         && sub.as_millis() < 300
                     {
-                        println!("end");
                         audio.set_pos(0, 0.0);
                     }
                 }
@@ -151,8 +150,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
                 if let Some(audio) = &mut self.audio {
                     audio.reset();
                 }
-                let rem = self.undo_stack.pop();
-                println!("rem: {:?}", rem);
+                let _rem = self.undo_stack.pop();
                 self.replay_messages();
                 if let Some(player) = &mut self.audio {
                     player.update_position_info();
@@ -268,10 +266,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
             | x @ Message::DeleteAudioSpan(..)
             | x @ Message::SpanTextUpdate(..)
             | x @ Message::ClickSplitPoint(..)
-            | x @ Message::Split => {
-                println!("added: {:?}", x);
-                self.undo_stack.push(x.clone())
-            }
+            | x @ Message::Split => self.undo_stack.push(x.clone()),
             _ => {}
         }
     }

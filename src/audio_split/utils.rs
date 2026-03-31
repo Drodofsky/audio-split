@@ -71,6 +71,7 @@ pub async fn open_audio_file(
         let file_name: String = path.file_prefix().unwrap().display().to_string();
         let file = File::open(path)?;
         let source = rodio::Decoder::try_from(file)?;
+        // TODO fix crash when not found, f.e.
         let length = source.total_duration().unwrap();
         player.skip_one();
         player.append(source);
