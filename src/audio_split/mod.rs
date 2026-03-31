@@ -388,6 +388,12 @@ impl<P: AudioPlayer> AudioSplit<P> {
         }
         self.undo_stack = cloned;
     }
+    pub fn title(&self) -> String {
+        match &self.audio {
+            Some(audio) => format!("Audio Split — {}", audio.file_name()),
+            None => "Audio Split".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

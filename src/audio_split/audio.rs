@@ -158,6 +158,9 @@ impl Audio {
         self.spans = vec![self.length.clone()];
         self.index_counter = 0;
     }
+    pub fn file_name(&self) -> &str {
+        &self.file_name
+    }
 }
 
 impl fmt::Debug for Audio {

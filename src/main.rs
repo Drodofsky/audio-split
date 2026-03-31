@@ -11,5 +11,6 @@ fn main() -> iced::Result {
         AudioSplit::view,
     )
     .subscription(AudioSplit::subscription)
+    .title(AudioSplit::title)
     .run()
 }
