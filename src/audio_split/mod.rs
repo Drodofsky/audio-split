@@ -34,6 +34,7 @@ pub struct AudioSplit<P: AudioPlayer> {
     duration: String,
     extension: Option<PathBuf>,
     info: UserInfo,
+    undo_stack: Vec<Message>,
 }
 
 impl<P: AudioPlayer> AudioSplit<P> {
@@ -48,9 +49,11 @@ impl<P: AudioPlayer> AudioSplit<P> {
             threshold: "-45.0".to_string(),
             extension: None,
             info: UserInfo::None,
+            undo_stack: Vec::new(),
         }
     }
     pub fn update(&mut self, message: Message) -> Task<Message> {
+        self.add_to_undo_stack(&message);
         match message {
             Message::OpenAudioFileDialog => Task::perform(
                 open_audio_file_dialog(
@@ -141,6 +144,18 @@ impl<P: AudioPlayer> AudioSplit<P> {
                     audio.set_play();
                 } else {
                     self.set_warning(warning::NO_AUDIO_LOADED, DebugId::WarningNoAudioLoaded);
+                }
+                Task::none()
+            }
+            Message::Undo => {
+                if let Some(audio) = &mut self.audio {
+                    audio.reset();
+                }
+                let rem = self.undo_stack.pop();
+                println!("rem: {:?}", rem);
+                self.replay_messages();
+                if let Some(player) = &mut self.audio {
+                    player.update_position_info();
                 }
                 Task::none()
             }
@@ -243,6 +258,23 @@ impl<P: AudioPlayer> AudioSplit<P> {
             }
         }
     }
+    fn add_to_undo_stack(&mut self, message: &Message) {
+        match message {
+            Message::AudioLoaded(..) => self.undo_stack.clear(),
+
+            x @ Message::UpdateDuration(..)
+            | x @ Message::UpdateThreshold(..)
+            | x @ Message::Analyzed(..)
+            | x @ Message::DeleteAudioSpan(..)
+            | x @ Message::SpanTextUpdate(..)
+            | x @ Message::ClickSplitPoint(..)
+            | x @ Message::Split => {
+                println!("added: {:?}", x);
+                self.undo_stack.push(x.clone())
+            }
+            _ => {}
+        }
+    }
     pub fn view(&self) -> Element<'_, Message> {
         widget::column![self.view_top(), self.view_center(), self.view_info()].into()
     }
@@ -267,6 +299,8 @@ impl<P: AudioPlayer> AudioSplit<P> {
             widget::text_input("", &self.duration)
                 .on_input(Message::UpdateDuration)
                 .id(DebugId::TextInputDuration),
+            widget::container(widget::button("undo").on_press(Message::Undo))
+                .id(DebugId::ButtonUndo),
             widget::container(widget::button("analyze").on_press(Message::Analyze))
                 .id(DebugId::ButtonAnalyze),
             widget::container(widget::button("split").on_press(Message::Split))
@@ -352,6 +386,13 @@ impl<P: AudioPlayer> AudioSplit<P> {
     fn set_info(&mut self, info: impl Into<String>, id: DebugId) {
         self.info = UserInfo::Info(info.into(), id)
     }
+    pub fn replay_messages(&mut self) {
+        let cloned = self.undo_stack.clone();
+        for message in &cloned {
+            let _ = self.update(message.clone());
+        }
+        self.undo_stack = cloned;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -366,6 +407,7 @@ pub enum Message {
     Pause,
     Play,
     Split,
+    Undo,
     DeleteAudioSpan(u32),
     SpanTextUpdate(u32, String),
     WindowEvent(iced::window::Event),

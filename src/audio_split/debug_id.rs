@@ -20,6 +20,7 @@ pub enum DebugId {
     ButtonSplit,
     ButtonExport,
     ButtonDelete(u32),
+    ButtonUndo,
     TextInputThreshold,
     TextInputDuration,
     Canvas,

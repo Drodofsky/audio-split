@@ -8,6 +8,7 @@ use super::{Message, audio_span::AudioSpan};
 pub struct Audio {
     player: Arc<rodio::Player>,
     spans: Vec<AudioSpan>,
+    length: AudioSpan,
     file_name: String,
     index_counter: u32,
 }
@@ -16,6 +17,7 @@ impl Audio {
     pub fn new(player: Arc<rodio::Player>, span: AudioSpan, file_name: String) -> Self {
         Self {
             player,
+            length: span.clone(),
             spans: vec![span],
             file_name,
             index_counter: 0,
@@ -153,6 +155,10 @@ impl Audio {
             .iter()
             .find(|a| a.split_points_selected())
             .is_some()
+    }
+    pub fn reset(&mut self) {
+        self.spans = vec![self.length.clone()];
+        self.index_counter = 0;
     }
 }
 
