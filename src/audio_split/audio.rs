@@ -131,13 +131,11 @@ impl Audio {
         self.spans.iter_mut().find(|s| s.id() == id)
     }
     // spices must be sorted
-    pub fn set_split_points(spans: &mut [AudioSpan], mut split_points: Vec<Duration>) {
+    pub fn set_split_points(spans: &mut [AudioSpan], split_points: Vec<Duration>) {
         spans.iter_mut().for_each(|s| s.clear_split_points());
-        for span in spans.iter_mut().rev() {
-            while let Some(last) = split_points.last() {
-                if span.insert_split_point(*last) {
-                    split_points.pop();
-                } else {
+        for point in split_points.iter().rev() {
+            for span in spans.iter_mut() {
+                if span.insert_split_point(*point) {
                     break;
                 }
             }
