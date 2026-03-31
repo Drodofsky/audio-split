@@ -2,7 +2,7 @@ use std::{fs::File, path::PathBuf, sync::Arc, time::Duration};
 
 use crate::audio_split::{audio::Audio, audio_span::AudioSpan, error::Error};
 use rfd::AsyncFileDialog;
-use rodio::{Sink, Source};
+use rodio::{Player, Source};
 use tokio::process::Command;
 
 pub async fn open_audio_file_dialog(starting_path: Option<PathBuf>) -> Option<String> {
@@ -64,7 +64,7 @@ fn fmt_duration(duration: Duration) -> String {
 
 pub async fn open_audio_file(
     path: impl Into<PathBuf> + Send + 'static,
-    sink: Arc<Sink>,
+    player: Arc<Player>,
 ) -> Result<Audio, Error> {
     tokio::task::spawn_blocking(|| {
         let path: PathBuf = path.into();
@@ -72,11 +72,11 @@ pub async fn open_audio_file(
         let file = File::open(path)?;
         let source = rodio::Decoder::try_from(file)?;
         let length = source.total_duration().unwrap();
-        sink.skip_one();
-        sink.append(source);
+        player.skip_one();
+        player.append(source);
         let span = AudioSpan::new(0, Duration::new(0, 0), length, format!("{file_name}_0"));
 
-        Ok(Audio::new(sink, span, file_name))
+        Ok(Audio::new(player, span, file_name))
     })
     .await
     .unwrap()

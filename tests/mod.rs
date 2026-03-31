@@ -12,7 +12,7 @@ use std::{
 use audio_split::{audio_player::AudioPlayer, error::Error, *};
 use iced::{Task, futures::StreamExt};
 use iced_runtime::task::into_stream;
-use rodio::Sink;
+use rodio::Player;
 pub async fn execute_task(task: Task<Message>) -> Vec<Message> {
     let mut messages = Vec::new();
 
@@ -36,14 +36,14 @@ pub async fn execute_tasks<P: AudioPlayer>(task: Task<Message>, audio_split: &mu
 }
 
 pub struct TestPlayer {
-    sink: Arc<rodio::Sink>,
+    player: Arc<rodio::Player>,
     stop: Arc<AtomicBool>,
     drain_thread: Option<JoinHandle<()>>,
 }
 
 impl AudioPlayer for TestPlayer {
     fn init() -> Result<Self, Error> {
-        let (sink, mut source_queue_output) = Sink::new();
+        let (player, mut source_queue_output) = Player::new();
         let stop = Arc::new(AtomicBool::new(false));
         let stop2 = stop.clone();
         let drain_thread = thread::spawn(move || {
@@ -59,13 +59,13 @@ impl AudioPlayer for TestPlayer {
             }
         });
         Ok(Self {
-            sink: Arc::new(sink),
+            player: Arc::new(player),
             stop,
             drain_thread: Some(drain_thread),
         })
     }
-    fn get_sink(&self) -> Arc<Sink> {
-        self.sink.clone()
+    fn get_player(&self) -> Arc<Player> {
+        self.player.clone()
     }
 }
 

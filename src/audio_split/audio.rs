@@ -6,16 +6,16 @@ use super::{Message, audio_span::AudioSpan};
 
 #[derive(Clone)]
 pub struct Audio {
-    sink: Arc<rodio::Sink>,
+    player: Arc<rodio::Player>,
     spans: Vec<AudioSpan>,
     file_name: String,
     index_counter: u32,
 }
 
 impl Audio {
-    pub fn new(sink: Arc<rodio::Sink>, span: AudioSpan, file_name: String) -> Self {
+    pub fn new(player: Arc<rodio::Player>, span: AudioSpan, file_name: String) -> Self {
         Self {
-            sink,
+            player,
             spans: vec![span],
             file_name,
             index_counter: 0,
@@ -39,17 +39,17 @@ impl Audio {
         &mut self.spans
     }
     pub fn get_pos(&self) -> Duration {
-        self.sink.get_pos()
+        self.player.get_pos()
     }
     pub fn set_pos(&mut self, span_id: u32, pos: f32) {
         self.spans
             .iter_mut()
             .find(|s| s.id() == span_id)
             .map(|s| s.set_pos_and_get_info(pos));
-        self.sink.try_seek(Duration::from_secs_f32(pos)).unwrap();
+        self.player.try_seek(Duration::from_secs_f32(pos)).unwrap();
     }
     pub fn update_position_info(&mut self) {
-        let pos = self.sink.get_pos().as_secs_f32();
+        let pos = self.player.get_pos().as_secs_f32();
         let mut found_zero = false;
         let mut found_next = false;
         let mut skip_to = Duration::default();
@@ -63,14 +63,14 @@ impl Audio {
         }
         if found_next {
             println!("skip");
-            self.sink.try_seek(skip_to).unwrap()
+            self.player.try_seek(skip_to).unwrap()
         }
     }
     pub fn set_play(&mut self) {
-        self.sink.play();
+        self.player.play();
     }
     pub fn set_pause(&mut self) {
-        self.sink.pause();
+        self.player.pause();
     }
     pub fn split(&mut self) -> usize {
         let mut splits: Vec<Duration> = self

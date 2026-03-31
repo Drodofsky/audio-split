@@ -76,7 +76,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
                     self.import_path = Some(path.clone().into());
                     self.extension = PathBuf::from(path.clone()).extension().map(|s| s.into());
                     Task::perform(
-                        open_audio_file(path, self.audio_player.get_sink()),
+                        open_audio_file(path, self.audio_player.get_player()),
                         Message::AudioLoaded,
                     )
                 } else {
@@ -179,7 +179,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
                 Event::FileDropped(f) => {
                     self.import_path = Some(f.clone());
                     Task::perform(
-                        open_audio_file(f, self.audio_player.get_sink()),
+                        open_audio_file(f, self.audio_player.get_player()),
                         Message::AudioLoaded,
                     )
                 }
