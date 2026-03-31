@@ -148,7 +148,11 @@ impl<P: AudioPlayer> AudioSplit<P> {
             Message::Split => {
                 if let Some(audio) = self.audio.as_mut() {
                     if audio.split_points_selected() {
-                        audio.split();
+                        let split_count = audio.split();
+                        self.set_info(
+                            info::AUDIO_SPLIT_INTO_PARTS.replace("{}", &format!("{split_count}")),
+                            DebugId::InfoSplits(split_count),
+                        );
                     } else {
                         self.set_warning(
                             warning::NO_SPLIT_POINT_SELECTED,
@@ -218,7 +222,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
                     } else {
                         self.set_info(
                             info::SPLIT_POINTS_DETECTED.replace("{}", &len.to_string()),
-                            DebugId::InfoSplitPointsSelected(len),
+                            DebugId::InfoSplitPointsDetected(len),
                         );
                     }
                 }

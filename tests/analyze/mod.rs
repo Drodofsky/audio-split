@@ -19,7 +19,7 @@ async fn splits_detected() {
         execute_tasks(task, &mut audio_split).await;
     }
     let mut ui = simulator(audio_split.view());
-    ui.find(DebugId::InfoSplitPointsSelected(39).id()).unwrap();
+    ui.find(DebugId::InfoSplitPointsDetected(39).id()).unwrap();
 }
 
 #[tokio::test]

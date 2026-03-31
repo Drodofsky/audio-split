@@ -30,7 +30,8 @@ impl AudioSpan {
     pub fn view(&self) -> Element<'_, Message> {
         widget::container(
             widget::column![
-                widget::canvas(self).width(self.calc_slider_length()),
+                widget::container(widget::canvas(self).width(self.calc_slider_length()))
+                    .id(DebugId::Canvas),
                 widget::slider(
                     self.start.as_secs_f32()..=self.end.as_secs_f32(),
                     self.position,

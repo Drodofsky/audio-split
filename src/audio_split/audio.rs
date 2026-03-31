@@ -72,7 +72,7 @@ impl Audio {
     pub fn set_pause(&mut self) {
         self.sink.pause();
     }
-    pub fn split(&mut self) {
+    pub fn split(&mut self) -> usize {
         let mut splits: Vec<Duration> = self
             .spans
             .iter()
@@ -81,9 +81,10 @@ impl Audio {
             .map(|s| *s)
             .collect();
         splits.sort();
-        for split in splits {
-            self.split_at(split);
+        for split in &splits {
+            self.split_at(*split);
         }
+        splits.len()
     }
     fn split_at(&mut self, pos: Duration) {
         let (index, span) = self

@@ -11,7 +11,8 @@ pub enum UserInfo {
 
 pub mod info {
     pub const AUDIO_LOADED: &str = "Audio file loaded.";
-    pub const SPLIT_POINTS_DETECTED: &str = "Detected {} potential split points.";
+    pub const SPLIT_POINTS_DETECTED: &str = "Detected {} potential split point(s).";
+    pub const AUDIO_SPLIT_INTO_PARTS: &str = "Split performed at {} point(s).";
 }
 
 pub mod warning {
