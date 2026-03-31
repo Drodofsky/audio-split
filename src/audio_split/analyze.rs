@@ -40,11 +40,11 @@ pub async fn detect_silence(
         }
         if let Some(t) = parse_secs_from_line(line, "silence_start:") {
             start_time = Some(t);
-        } else if let Some(t) = parse_secs_from_line(line, "silence_end:") {
-            if let Some(start) = start_time {
-                let time = (start + t) / 2.;
-                time_stamps.push(Duration::from_secs_f64(time));
-            }
+        } else if let Some(t) = parse_secs_from_line(line, "silence_end:")
+            && let Some(start) = start_time
+        {
+            let time = (start + t) / 2.;
+            time_stamps.push(Duration::from_secs_f64(time));
         }
     }
     println!("{time_stamps:#?}");

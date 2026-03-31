@@ -54,9 +54,9 @@ impl Audio {
         let mut found_next = false;
         let mut skip_to = Duration::default();
         for (b, pos) in self.spans.iter_mut().map(|s| s.set_pos_and_get_info(pos)) {
-            if b == 0 || found_zero == true {
+            if b == 0 || found_zero {
                 found_zero = true;
-            } else if b == -1 && found_next == false {
+            } else if b == -1 && !found_next {
                 found_next = true;
                 skip_to = pos;
             }
@@ -76,9 +76,8 @@ impl Audio {
         let mut splits: Vec<Duration> = self
             .spans
             .iter()
-            .map(|s| s.selected_split_points().iter())
-            .flatten()
-            .map(|s| *s)
+            .flat_map(|s| s.selected_split_points().iter())
+            .copied()
             .collect();
         splits.sort();
         for split in &splits {
@@ -144,7 +143,7 @@ impl Audio {
     }
     pub fn toggle_selected_split_points(&mut self, split_point: Duration) {
         for span in self.spans.iter_mut() {
-            if span.toggle_split_point_selection(split_point) == true {
+            if span.toggle_split_point_selection(split_point) {
                 return;
             }
         }

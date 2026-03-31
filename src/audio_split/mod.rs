@@ -56,8 +56,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
                 open_audio_file_dialog(
                     self.import_path
                         .clone()
-                        .map(|p| p.parent().map(|p| p.to_path_buf()))
-                        .flatten(),
+                        .and_then(|p| p.parent().map(|p| p.to_path_buf())),
                 ),
                 Message::AudioFilePathLoaded,
             ),
@@ -199,7 +198,7 @@ impl<P: AudioPlayer> AudioSplit<P> {
                     {
                         Task::perform(
                             detect_silence(path, threshold, Duration::from_secs_f32(duration)),
-                            |a| Message::Analyzed(a),
+                            Message::Analyzed,
                         )
                     } else {
                         Task::none()

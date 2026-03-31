@@ -90,10 +90,10 @@ impl canvas::Program<Message> for AudioSpan {
                 frame.fill(&splice_line, theme.extended_palette().danger.base.color);
             } else {
                 frame.fill(&splice_line, theme.extended_palette().primary.base.color);
-                if let Some(i) = state.hovered {
-                    if i == index {
-                        frame.fill(&splice_line, theme.extended_palette().primary.strong.color);
-                    }
+                if let Some(i) = state.hovered
+                    && i == index
+                {
+                    frame.fill(&splice_line, theme.extended_palette().primary.strong.color);
                 }
             }
         }
