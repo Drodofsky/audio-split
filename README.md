@@ -10,7 +10,7 @@ The project is in early development; bugs and incomplete error handling are to b
 
 
 
-###  (Linux)
+### Installation (Linux)
 
 ```bash
 git clone https://github.com/Drodofsky/audio-split
