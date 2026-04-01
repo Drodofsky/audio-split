@@ -6,6 +6,14 @@ use iced::window;
 
 pub mod audio_split;
 fn main() -> iced::Result {
+    #[cfg(target_os = "linux")]
+    let platform_specific = window::settings::PlatformSpecific {
+        application_id: "audio-split".to_string(),
+        ..Default::default()
+    };
+
+    #[cfg(not(target_os = "linux"))]
+    let platform_specific = window::settings::PlatformSpecific::default();
     iced::application(
         || AudioSplit::init(RodioPlayer::init().unwrap()),
         AudioSplit::update,
@@ -18,10 +26,7 @@ fn main() -> iced::Result {
             window::icon::from_rgba(include_bytes!("../media/icon.rgba").to_vec(), 256, 256)
                 .unwrap(),
         ),
-        platform_specific: window::settings::PlatformSpecific {
-            application_id: "audio-split".to_string(),
-            ..Default::default()
-        },
+        platform_specific,
 
         ..Default::default()
     })
