@@ -18,6 +18,10 @@ fn main() -> iced::Result {
             window::icon::from_rgba(include_bytes!("../media/icon.rgba").to_vec(), 256, 256)
                 .unwrap(),
         ),
+        platform_specific: window::settings::PlatformSpecific {
+            application_id: "audio-split".to_string(),
+            ..Default::default()
+        },
 
         ..Default::default()
     })
