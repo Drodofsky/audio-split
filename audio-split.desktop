@@ -1,7 +1,6 @@
 [Desktop Entry]
 Name=Audio Split
-Comment=Audio segmentation tool
 Exec=audio_split
-Icon=io.github.drodofsky.AudioSplit
+Icon=audio-split
 Type=Application
 Categories=AudioVideo;Audio;
